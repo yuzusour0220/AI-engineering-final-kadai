@@ -11,7 +11,10 @@ app = FastAPI(title="課題管理API")
 # CORS設定
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Next.jsの開発サーバー
+    allow_origins=[
+        "http://localhost:3000",
+        "http://frontend:3000",
+    ],  # Next.jsのサーバー
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

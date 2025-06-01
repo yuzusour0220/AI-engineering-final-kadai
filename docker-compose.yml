@@ -1,0 +1,48 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    networks:
+      - app-network
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    networks:
+      - app-network
+    restart: always
+
+  data-init:
+    build:
+      context: .
+      dockerfile: ./data-init/Dockerfile
+    depends_on:
+      - backend
+    # 既にDockerfileでwait-for-itスクリプトが設定されているので、再指定する必要はない
+    environment:
+      - API_BASE_URL=http://backend:8000
+    networks:
+      - app-network
+    # 一度だけ実行して終了するように設定
+    restart: "no"
+
+networks:
+  app-network:
+    driver: bridge

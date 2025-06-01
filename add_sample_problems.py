@@ -5,9 +5,11 @@
 
 import requests
 import json
+import os
 from datetime import datetime
 
-API_BASE_URL = "http://localhost:8000"
+# 環境変数からAPIのURLを取得、デフォルトはlocalhost
+API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000")
 
 # サンプル問題データ
 sample_problems = [

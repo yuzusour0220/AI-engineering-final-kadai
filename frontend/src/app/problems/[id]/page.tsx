@@ -24,15 +24,20 @@ export default function ProblemPage() {
   useEffect(() => {
     const loadProblem = async () => {
       try {
+        console.log(`Loading problem with ID: ${problemId}`);
         setIsLoading(true);
         setError(null);
         const problemData = await fetchProblem(problemId);
+        console.log('Problem data loaded successfully:', problemData);
         setProblem(problemData);
       } catch (err) {
+        console.error('Error loading problem:', err);
         if (err instanceof ApiError) {
-          setError(err.message);
+          console.error('API Error details:', { status: err.status, message: err.message });
+          setError(`API Error (${err.status}): ${err.message}`);
         } else {
-          setError("問題の読み込みに失敗しました");
+          console.error('Unknown error:', err);
+          setError(`予期しないエラーが発生しました: ${err instanceof Error ? err.message : 'Unknown error'}`);
         }
       } finally {
         setIsLoading(false);
@@ -40,7 +45,11 @@ export default function ProblemPage() {
     };
 
     if (problemId) {
+      console.log('Problem ID found:', problemId);
       loadProblem();
+    } else {
+      console.log('No problem ID found');
+      setError('問題IDが指定されていません');
     }
   }, [problemId]);
 

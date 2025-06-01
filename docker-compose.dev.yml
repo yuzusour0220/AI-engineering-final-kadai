@@ -1,0 +1,50 @@
+services:
+  backend-dev:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: uvicorn main:app --reload --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    networks:
+      - app-network-dev
+    restart: always
+
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    command: npm run dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend-dev
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    networks:
+      - app-network-dev
+    restart: always
+
+  data-init-dev:
+    build:
+      context: .
+      dockerfile: ./data-init/Dockerfile
+    depends_on:
+      - backend-dev
+    # 既にDockerfileでwait-for-itスクリプトが設定されているので、再指定する必要はない
+    environment:
+      - API_BASE_URL=http://backend-dev:8000
+    networks:
+      - app-network-dev
+    # 一度だけ実行して終了するように設定
+    restart: "no"
+
+networks:
+  app-network-dev:
+    driver: bridge
