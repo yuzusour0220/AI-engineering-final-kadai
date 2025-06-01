@@ -1,0 +1,193 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import CodeEditor from "@/components/CodeEditor";
+import AdviceDisplay from "@/components/AdviceDisplay";
+import { fetchProblem, submitCode, ApiError } from "@/lib/api";
+import { Problem } from "@/types/api";
+
+export default function ProblemPage() {
+  const params = useParams();
+  const problemId = params.id as string;
+
+  const [problem, setProblem] = useState<Problem | null>(null);
+  const [code, setCode] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [submitMessage, setSubmitMessage] = useState<string | null>(null);
+  const [showAdviceArea, setShowAdviceArea] = useState(false);
+
+  // 問題データを取得
+  useEffect(() => {
+    const loadProblem = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const problemData = await fetchProblem(problemId);
+        setProblem(problemData);
+      } catch (err) {
+        if (err instanceof ApiError) {
+          setError(err.message);
+        } else {
+          setError("問題の読み込みに失敗しました");
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (problemId) {
+      loadProblem();
+    }
+  }, [problemId]);
+
+  // コード提出処理
+  const handleSubmit = async () => {
+    if (!problem || !code.trim()) {
+      setError("コードを入力してください");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setError(null);
+      setSubmitMessage(null);
+      
+      // アドバイス表示エリアを表示
+      setShowAdviceArea(true);
+      setSubmitMessage("アドバイスを生成中です...");
+
+      const response = await submitCode({
+        problem_id: problem.id,
+        user_code: code,
+      });
+
+      setSubmitMessage(response.message);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError("提出に失敗しました");
+      }
+      setShowAdviceArea(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg text-gray-600">問題を読み込み中...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !problem) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <h2 className="text-lg font-medium text-red-800 mb-2">エラー</h2>
+          <p className="text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!problem) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center text-gray-600">問題が見つかりません</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
+      {/* ナビゲーション */}
+      <div className="mb-6">
+        <Link
+          href="/"
+          className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium"
+        >
+          ← ホームに戻る
+        </Link>
+      </div>
+
+      {/* ヘッダー */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          問題 {problem.id}: {problem.title}
+        </h1>
+        <div className="text-sm text-gray-500">
+          作成日: {new Date(problem.created_at).toLocaleDateString("ja-JP")}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* 左側: 問題文 */}
+        <div className="space-y-6">
+          <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">問題文</h2>
+            <div className="prose prose-gray max-w-none">
+              <pre className="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded border">
+                {problem.description}
+              </pre>
+            </div>
+          </div>
+
+          {/* アドバイス表示エリア */}
+          {showAdviceArea && (
+            <AdviceDisplay 
+              advice={submitMessage} 
+              isLoading={isSubmitting} 
+            />
+          )}
+        </div>
+
+        {/* 右側: コードエディター */}
+        <div className="space-y-6">
+          <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Pythonコードを入力してください
+            </h2>
+            
+            <div className="mb-4">
+              <CodeEditor
+                value={code}
+                onChange={setCode}
+                language="python"
+                height="400px"
+              />
+            </div>
+
+            {/* エラー表示 */}
+            {error && (
+              <div className="mb-4 bg-red-50 border border-red-200 rounded p-3">
+                <p className="text-red-600 text-sm">{error}</p>
+              </div>
+            )}
+
+            {/* 提出ボタン */}
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitting || !code.trim()}
+              className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
+                isSubmitting || !code.trim()
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              }`}
+            >
+              {isSubmitting ? "提出中..." : "コードを提出"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

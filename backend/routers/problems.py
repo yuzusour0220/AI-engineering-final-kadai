@@ -1,87 +1,132 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.orm import Session
 from typing import List
-from models import Problem
-from datetime import datetime
+from models import Problem, ProblemCreate
+from database import get_db, ProblemModel
+from datetime import datetime, timezone
 
-# 関連するAPIエンドポイント（URL）をグループ化するために使われます。このルーターによって、問題に関するすべての操作がまとめられています。
+# 関連するAPIエンドポイント（URL）をグループ化するために使われます。
 router = APIRouter()
-
-# インメモリデータストア
-# 現時点での問題データを一時的に保存するための「インメモリデータストア」です。つまり、アプリケーションが実行されている間だけデータがメモリに保持され、アプリケーションを再起動するとデータは消えてしまいます。実際のアプリケーションでは、データベース（MongoDBやPostgreSQLなど）を使ってデータを永続化します。
-problems_db: List[Problem] = []
 
 
 @router.post("/problems/", response_model=Problem)
-async def create_problem(problem: Problem):
+async def create_problem(problem: ProblemCreate, db: Session = Depends(get_db)):
     """新しい問題を作成する"""
     # 問題が既に存在するか確認
-    for p in problems_db:
-        if p.id == problem.id:
-            raise HTTPException(
-                status_code=400, detail=f"Problem with ID {problem.id} already exists"
-            )
+    db_problem = db.query(ProblemModel).filter(ProblemModel.id == problem.id).first()
+    if db_problem:
+        raise HTTPException(
+            status_code=400, detail=f"Problem with ID {problem.id} already exists"
+        )
 
-    # 現在時刻を設定
-    problem.created_at = datetime.now(datetime.timezone.utc)
-    problem.updated_at = problem.created_at
+    # 問題をデータベースに保存
+    new_problem = ProblemModel(
+        id=problem.id,
+        title=problem.title,
+        description=problem.description,
+        correct_code=problem.correct_code,
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+    )
+    db.add(new_problem)
+    db.commit()
+    db.refresh(new_problem)
 
-    # 問題を保存
-    problems_db.append(problem)
-    return problem
+    # Pydanticモデルに変換して返す
+    return Problem(
+        id=new_problem.id,
+        title=new_problem.title,
+        description=new_problem.description,
+        correct_code=new_problem.correct_code,
+        created_at=new_problem.created_at,
+        updated_at=new_problem.updated_at,
+    )
 
 
 @router.get("/problems/", response_model=List[Problem])
-async def read_problems():
+async def read_problems(db: Session = Depends(get_db)):
     """全ての問題を取得する"""
-    return problems_db
+    problems = db.query(ProblemModel).all()
+    return [
+        Problem(
+            id=problem.id,
+            title=problem.title,
+            description=problem.description,
+            correct_code=problem.correct_code,
+            created_at=problem.created_at,
+            updated_at=problem.updated_at,
+        )
+        for problem in problems
+    ]
 
 
 @router.get("/problems/{problem_id}", response_model=Problem)
-async def read_problem(problem_id: int):
+async def read_problem(problem_id: int, db: Session = Depends(get_db)):
     """指定されたIDの問題を取得する"""
-    for problem in problems_db:
-        if problem.id == problem_id:
-            return problem
-    raise HTTPException(
-        status_code=404, detail=f"Problem with ID {problem_id} not found"
+    problem = db.query(ProblemModel).filter(ProblemModel.id == problem_id).first()
+    if problem is None:
+        raise HTTPException(
+            status_code=404, detail=f"Problem with ID {problem_id} not found"
+        )
+    return Problem(
+        id=problem.id,
+        title=problem.title,
+        description=problem.description,
+        correct_code=problem.correct_code,
+        created_at=problem.created_at,
+        updated_at=problem.updated_at,
     )
 
 
 @router.put("/problems/{problem_id}", response_model=Problem)
-async def update_problem(problem_id: int, updated_problem: Problem):
+async def update_problem(
+    problem_id: int, updated_problem: ProblemCreate, db: Session = Depends(get_db)
+):
     """指定されたIDの問題を更新する"""
-    for i, problem in enumerate(problems_db):
-        if problem.id == problem_id:
-            # IDが一致しているか確認
-            if updated_problem.id != problem_id:
-                raise HTTPException(
-                    status_code=400, detail="Problem ID in path and body must match"
-                )
+    # 問題が存在するか確認
+    db_problem = db.query(ProblemModel).filter(ProblemModel.id == problem_id).first()
+    if db_problem is None:
+        raise HTTPException(
+            status_code=404, detail=f"Problem with ID {problem_id} not found"
+        )
 
-            # 更新時刻を設定
-            updated_problem.created_at = problem.created_at  # 作成日時は変更しない
-            updated_problem.updated_at = datetime.now(datetime.timezone.utc)
+    # IDが一致しているか確認
+    if updated_problem.id != problem_id:
+        raise HTTPException(
+            status_code=400, detail="Problem ID in path and body must match"
+        )
 
-            # 問題を更新
-            problems_db[i] = updated_problem
-            return updated_problem
+    # 問題を更新
+    db_problem.title = updated_problem.title
+    db_problem.description = updated_problem.description
+    db_problem.correct_code = updated_problem.correct_code
+    db_problem.updated_at = datetime.now(timezone.utc)
 
-    raise HTTPException(
-        status_code=404, detail=f"Problem with ID {problem_id} not found"
+    db.commit()
+    db.refresh(db_problem)
+
+    return Problem(
+        id=db_problem.id,
+        title=db_problem.title,
+        description=db_problem.description,
+        correct_code=db_problem.correct_code,
+        created_at=db_problem.created_at,
+        updated_at=db_problem.updated_at,
     )
 
 
 @router.delete("/problems/{problem_id}")
-async def delete_problem(problem_id: int):
+async def delete_problem(problem_id: int, db: Session = Depends(get_db)):
     """指定されたIDの問題を削除する"""
-    for i, problem in enumerate(problems_db):
-        if problem.id == problem_id:
-            # 問題を削除
-            problems_db.pop(i)
-            return {
-                "message": f"Problem with ID {problem_id} has been deleted successfully"
-            }
+    # 問題が存在するか確認
+    db_problem = db.query(ProblemModel).filter(ProblemModel.id == problem_id).first()
+    if db_problem is None:
+        raise HTTPException(
+            status_code=404, detail=f"Problem with ID {problem_id} not found"
+        )
 
-    raise HTTPException(
-        status_code=404, detail=f"Problem with ID {problem_id} not found"
-    )
+    # 問題を削除
+    db.delete(db_problem)
+    db.commit()
+
+    return {"message": f"Problem with ID {problem_id} has been deleted successfully"}
