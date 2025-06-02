@@ -1,9 +1,7 @@
 # サンドボックスサービス - 完全版
 import asyncio
 import docker
-import tempfile
 import time
-import os
 from typing import Optional
 from pydantic import BaseModel
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
@@ -30,32 +28,24 @@ def execute_python_code_sync(
         """コンテナ実行を行う内部関数"""
         client = docker.from_env()
 
-        # 一時ファイルにユーザーコードを書き込み
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".py", delete=False
-        ) as temp_file:
-            temp_file.write(user_code)
-            temp_file_path = temp_file.name
-
-        # ボリュームマウントの設定
-        volumes = {temp_file_path: {"bind": "/tmp/user_code.py", "mode": "ro"}}
-        command = ["python", "/tmp/user_code.py"]
-
-        # stdin入力がある場合、一時ファイルを作成
-        stdin_file_path = None
-        if stdin_input:
-            with tempfile.NamedTemporaryFile(mode="w", delete=False) as stdin_file:
-                stdin_file.write(stdin_input)
-                stdin_file_path = stdin_file.name
-            volumes[stdin_file_path] = {"bind": "/tmp/stdin.txt", "mode": "ro"}
-            command = ["sh", "-c", "python /tmp/user_code.py < /tmp/stdin.txt"]
-
         try:
-            # コンテナを実行
+            # 標準入力がある場合はそれを含めたコードを作成
+            if stdin_input:
+                # 標準入力をハードコーディングしたコードを生成
+                full_code = f"""
+import sys
+from io import StringIO
+sys.stdin = StringIO('''{stdin_input}''')
+
+{user_code}
+"""
+            else:
+                full_code = user_code
+
+            # コンテナを実行（コードを直接実行）
             result = client.containers.run(
-                image="python-sandbox",  # 新しく作成したサンドボックスイメージを使用
-                command=command,
-                volumes=volumes,
+                image="python-sandbox",
+                command=["python", "-c", full_code],
                 network_disabled=True,
                 mem_limit="128m",
                 remove=True,
@@ -78,21 +68,6 @@ def execute_python_code_sync(
             stdout = ""
             stderr = f"Docker error: {str(e)}"
             exit_code = 1
-
-        finally:
-            # 一時ファイルを削除
-            try:
-                if temp_file_path and os.path.exists(temp_file_path):
-                    os.unlink(temp_file_path)
-            except Exception:
-                pass
-
-            # stdin用一時ファイルを削除
-            try:
-                if stdin_file_path and os.path.exists(stdin_file_path):
-                    os.unlink(stdin_file_path)
-            except Exception:
-                pass
 
         return stdout, stderr, exit_code
 

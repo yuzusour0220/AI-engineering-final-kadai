@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import CodeEditor from "@/components/CodeEditor";
-import AdviceDisplay from "@/components/AdviceDisplay";
+import ExecutionResultDisplay from "@/components/ExecutionResultDisplay";
 import { fetchProblem, submitCode, ApiError } from "@/lib/api";
 import { Problem, SubmissionResponse } from "@/types/api";
 
@@ -151,7 +151,7 @@ export default function ProblemPage() {
 
           {/* 実行結果表示エリア */}
           {showResultArea && (
-            <AdviceDisplay 
+            <ExecutionResultDisplay 
               executionResult={executionResult} 
               isLoading={isSubmitting} 
             />

@@ -17,4 +17,4 @@ RUN chmod +x add_sample_problems.py && \
     sed -i 's/\r$//' wait-for-it.sh
 
 # バックエンドサーバーの起動を待ってから実行
-CMD ["sh", "wait-for-it.sh", "backend-dev", "8000", "python", "add_sample_problems.py"]
+CMD ["sh", "wait-for-it.sh", "backend", "8000", "python", "add_sample_problems.py"]

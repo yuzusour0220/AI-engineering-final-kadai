@@ -7,6 +7,7 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - app-network
     restart: always
@@ -25,6 +26,7 @@ services:
       - backend
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL_INTERNAL=http://backend:8000
     networks:
       - app-network
     restart: always
