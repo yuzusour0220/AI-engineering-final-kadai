@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timezone
@@ -32,6 +32,7 @@ class ProblemModel(Base):
     title = Column(String, index=True)
     description = Column(Text)
     correct_code = Column(Text)
+    test_input = Column(String, nullable=True)  # テストケース入力文字列
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
     updated_at = Column(
         DateTime,
@@ -50,6 +51,11 @@ class SubmissionModel(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     problem_id = Column(Integer, index=True)
     user_code = Column(Text)
+    stdout = Column(Text, nullable=True)  # 実行標準出力
+    stderr = Column(Text, nullable=True)  # 実行標準エラー
+    execution_time_ms = Column(Float, nullable=True)  # 実行時間（ミリ秒）
+    exit_code = Column(Integer, nullable=True)  # 終了コード
+    advice_text = Column(Text, nullable=True)  # AIからのアドバイス保存用
     submitted_at = Column(DateTime, default=datetime.now(timezone.utc))
 
 

@@ -10,6 +10,7 @@ class ProblemBase(BaseModel):
     title: str
     description: str
     correct_code: str
+    test_input: str | None = None  # テストケース入力文字列
 
 
 class ProblemCreate(ProblemBase):
@@ -48,3 +49,27 @@ class SubmissionResponse(BaseModel):
     """
 
     message: str
+    stdout: str | None = None  # 実行標準出力
+    stderr: str | None = None  # 実行標準エラー
+    execution_time_ms: float | None = None  # 実行時間（ミリ秒）
+    exit_code: int | None = None  # 終了コード
+    advice_text: str | None = None  # AIからのアドバイス
+
+
+class Submission(BaseModel):
+    """
+    提出情報を表すモデル
+    """
+
+    id: int
+    problem_id: int
+    user_code: str
+    stdout: str | None = None
+    stderr: str | None = None
+    execution_time_ms: float | None = None
+    exit_code: int | None = None
+    advice_text: str | None = None
+    submitted_at: datetime
+
+    class Config:
+        from_attributes = True  # SQLAlchemyモデルからの変換を許可

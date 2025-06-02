@@ -25,6 +25,7 @@ async def create_problem(problem: ProblemCreate, db: Session = Depends(get_db)):
         title=problem.title,
         description=problem.description,
         correct_code=problem.correct_code,
+        test_input=problem.test_input,  # test_inputフィールドを追加
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
     )
@@ -38,6 +39,7 @@ async def create_problem(problem: ProblemCreate, db: Session = Depends(get_db)):
         title=new_problem.title,
         description=new_problem.description,
         correct_code=new_problem.correct_code,
+        test_input=new_problem.test_input,  # test_inputフィールドを追加
         created_at=new_problem.created_at,
         updated_at=new_problem.updated_at,
     )
@@ -53,6 +55,7 @@ async def read_problems(db: Session = Depends(get_db)):
             title=problem.title,
             description=problem.description,
             correct_code=problem.correct_code,
+            test_input=problem.test_input,  # test_inputフィールドを追加
             created_at=problem.created_at,
             updated_at=problem.updated_at,
         )
@@ -73,6 +76,7 @@ async def read_problem(problem_id: int, db: Session = Depends(get_db)):
         title=problem.title,
         description=problem.description,
         correct_code=problem.correct_code,
+        test_input=problem.test_input,  # test_inputフィールドを追加
         created_at=problem.created_at,
         updated_at=problem.updated_at,
     )
@@ -100,6 +104,7 @@ async def update_problem(
     db_problem.title = updated_problem.title
     db_problem.description = updated_problem.description
     db_problem.correct_code = updated_problem.correct_code
+    db_problem.test_input = updated_problem.test_input  # test_inputフィールドを追加
     db_problem.updated_at = datetime.now(timezone.utc)
 
     db.commit()
@@ -110,6 +115,7 @@ async def update_problem(
         title=db_problem.title,
         description=db_problem.description,
         correct_code=db_problem.correct_code,
+        test_input=db_problem.test_input,  # test_inputフィールドを追加
         created_at=db_problem.created_at,
         updated_at=db_problem.updated_at,
     )

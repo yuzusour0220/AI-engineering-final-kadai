@@ -5,6 +5,7 @@ export interface Problem {
     title: string;
     description: string;
     correct_code: string;
+    test_input?: string | null;  // test_inputフィールドを追加
     created_at: string;
     updated_at: string;
 }
@@ -16,4 +17,9 @@ export interface SubmissionCreate {
 
 export interface SubmissionResponse {
     message: string;
+    stdout?: string | null;  // 実行標準出力
+    stderr?: string | null;  // 実行標準エラー
+    execution_time_ms?: number | null;  // 実行時間（ミリ秒）
+    exit_code?: number | null;  // 終了コード
+    advice_text?: string | null;  // AIからのアドバイス（将来用）
 }

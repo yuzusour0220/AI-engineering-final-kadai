@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from typing import Dict
 from sqlalchemy.orm import Session
 from models import SubmissionCreate, SubmissionResponse
 from database import get_db, SubmissionModel, ProblemModel
+from services.sandbox_service import execute_python_code_in_docker
 from datetime import datetime, timezone
 
 # コード提出に関するエンドポイントをグループ化するためのルーター
@@ -12,7 +12,7 @@ router = APIRouter()
 @router.post("/submissions/", response_model=SubmissionResponse)
 async def create_submission(
     submission: SubmissionCreate, db: Session = Depends(get_db)
-) -> Dict[str, str]:
+) -> SubmissionResponse:
     """
     コード提出を受け付けるエンドポイント。
 
@@ -21,7 +21,7 @@ async def create_submission(
         db: データベースセッション
 
     Returns:
-        メッセージを含む辞書
+        実行結果を含むSubmissionResponse
     """
     # 問題が存在するか確認
     problem = (
@@ -32,14 +32,47 @@ async def create_submission(
             status_code=404, detail=f"Problem with ID {submission.problem_id} not found"
         )
 
-    # 提出を保存
-    new_submission = SubmissionModel(
-        problem_id=submission.problem_id,
-        user_code=submission.user_code,
-        submitted_at=datetime.now(timezone.utc),
-    )
-    db.add(new_submission)
-    db.commit()
+    # サンドボックスでコード実行
+    try:
+        execution_result = await execute_python_code_in_docker(
+            user_code=submission.user_code,
+            stdin_input=problem.test_input,  # test_inputを標準入力として渡す
+        )
 
-    # TODO: 将来的にはここでコードの実行や評価を行う
-    return {"message": "コードを受け付けました"}
+        # 提出を保存
+        new_submission = SubmissionModel(
+            problem_id=submission.problem_id,
+            user_code=submission.user_code,
+            stdout=execution_result.stdout,
+            stderr=execution_result.stderr,
+            execution_time_ms=execution_result.execution_time_ms,
+            exit_code=execution_result.exit_code,
+            submitted_at=datetime.now(timezone.utc),
+        )
+        db.add(new_submission)
+        db.commit()
+
+        # レスポンスを返す
+        return SubmissionResponse(
+            message="コードの実行が完了しました",
+            stdout=execution_result.stdout,
+            stderr=execution_result.stderr,
+            execution_time_ms=execution_result.execution_time_ms,
+            exit_code=execution_result.exit_code,
+        )
+
+    except Exception as e:
+        # 実行エラーの場合でも記録は残す
+        new_submission = SubmissionModel(
+            problem_id=submission.problem_id,
+            user_code=submission.user_code,
+            stderr=str(e),
+            exit_code=-1,
+            submitted_at=datetime.now(timezone.utc),
+        )
+        db.add(new_submission)
+        db.commit()
+
+        return SubmissionResponse(
+            message="コードの実行中にエラーが発生しました", stderr=str(e), exit_code=-1
+        )

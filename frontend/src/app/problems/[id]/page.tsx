@@ -6,7 +6,7 @@ import Link from "next/link";
 import CodeEditor from "@/components/CodeEditor";
 import AdviceDisplay from "@/components/AdviceDisplay";
 import { fetchProblem, submitCode, ApiError } from "@/lib/api";
-import { Problem } from "@/types/api";
+import { Problem, SubmissionResponse } from "@/types/api";
 
 export default function ProblemPage() {
   const params = useParams();
@@ -17,8 +17,8 @@ export default function ProblemPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [submitMessage, setSubmitMessage] = useState<string | null>(null);
-  const [showAdviceArea, setShowAdviceArea] = useState(false);
+  const [executionResult, setExecutionResult] = useState<SubmissionResponse | null>(null);
+  const [showResultArea, setShowResultArea] = useState(false);
 
   // 問題データを取得
   useEffect(() => {
@@ -63,25 +63,24 @@ export default function ProblemPage() {
     try {
       setIsSubmitting(true);
       setError(null);
-      setSubmitMessage(null);
+      setExecutionResult(null);
       
-      // アドバイス表示エリアを表示
-      setShowAdviceArea(true);
-      setSubmitMessage("アドバイスを生成中です...");
+      // 実行結果表示エリアを表示
+      setShowResultArea(true);
 
       const response = await submitCode({
         problem_id: problem.id,
         user_code: code,
       });
 
-      setSubmitMessage(response.message);
+      setExecutionResult(response);
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
         setError("提出に失敗しました");
       }
-      setShowAdviceArea(false);
+      setShowResultArea(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -150,10 +149,10 @@ export default function ProblemPage() {
             </div>
           </div>
 
-          {/* アドバイス表示エリア */}
-          {showAdviceArea && (
+          {/* 実行結果表示エリア */}
+          {showResultArea && (
             <AdviceDisplay 
-              advice={submitMessage} 
+              executionResult={executionResult} 
               isLoading={isSubmitting} 
             />
           )}
