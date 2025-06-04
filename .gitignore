@@ -9,8 +9,7 @@ build/
 develop-eggs/
 dist/
 downloads/
-!frontend/src/lib/
-!frontend/src/lib/**
+
 eggs/
 .eggs/
 lib/
@@ -21,6 +20,8 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+!frontend/src/lib/
+!frontend/src/lib/**
 
 # 仮想環境
 venv/
