@@ -1,15 +1,16 @@
 # AIアドバイス生成サービス
 from huggingface_hub import InferenceClient
 import os
+from dotenv import load_dotenv
 
-# Hugging Face InferenceClient を初期化
-client = InferenceClient(
-    provider="huggingface",
-    token=os.getenv("HUGGINGFACE_API_KEY"),
-)
-
+load_dotenv()
 # 使用するモデル名
 HUGGINGFACE_MODEL_ID = "Qwen/Qwen2.5-32B-Instruct"
+# Hugging Face InferenceClient を初期化
+client = InferenceClient(
+    provider="nebius",  # または "huggingface" など適切なプロバイダーを指定
+    token=os.getenv("HUGGINGFACE_API_KEY"),
+)
 
 
 async def generate_advice_with_huggingface(
