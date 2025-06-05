@@ -3,3 +3,5 @@ uvicorn==0.32.1
 sqlalchemy==2.0.36
 pydantic==2.10.3
 docker==7.1.0
+huggingface_hub==0.32.4
+python-dotenv==1.1.0
