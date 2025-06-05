@@ -10,6 +10,15 @@ export interface Problem {
     updated_at: string;
 }
 
+// 新規作成・更新時に使用する型
+export interface ProblemCreate {
+    id?: number;
+    title: string;
+    description: string;
+    correct_code: string;
+    test_input?: string | null;
+}
+
 export interface SubmissionCreate {
     problem_id: number;
     user_code: string;
