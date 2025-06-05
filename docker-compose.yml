@@ -31,20 +31,6 @@ services:
       - app-network
     restart: always
 
-  data-init:
-    build:
-      context: .
-      dockerfile: ./data-init/Dockerfile
-    depends_on:
-      - backend
-    # 既にDockerfileでwait-for-itスクリプトが設定されているので、再指定する必要はない
-    environment:
-      - API_BASE_URL=http://backend:8000
-    networks:
-      - app-network
-    # 一度だけ実行して終了するように設定
-    restart: "no"
-
 networks:
   app-network:
     driver: bridge
