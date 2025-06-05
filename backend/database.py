@@ -28,7 +28,7 @@ class ProblemModel(Base):
 
     __tablename__ = "problems"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     title = Column(String, index=True)
     description = Column(Text)
     correct_code = Column(Text)

@@ -13,7 +13,6 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from services.sandbox_service import (
     execute_python_code_sync,
     execute_python_code_in_docker,
-    CodeExecutionResult,
 )
 
 
