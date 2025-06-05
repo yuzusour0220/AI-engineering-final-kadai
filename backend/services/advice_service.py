@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 # 使用するモデル名
-HUGGINGFACE_MODEL_ID = "Qwen/Qwen2.5-32B-Instruct"
+HUGGINGFACE_MODEL_ID = "Qwen/Qwen2.5-72B-Instruct"
 # Hugging Face InferenceClient を初期化
 client = InferenceClient(
     provider="nebius",  # または "huggingface" など適切なプロバイダーを指定
