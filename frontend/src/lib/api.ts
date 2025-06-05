@@ -1,4 +1,4 @@
-import { Problem, SubmissionCreate, SubmissionResponse } from "@/types/api";
+import { Problem, ProblemCreate, SubmissionCreate, SubmissionResponse } from "@/types/api";
 
 // サーバーサイドとクライアントサイドで異なるAPI URLを使用
 const getApiBaseUrl = () => {
@@ -110,6 +110,72 @@ export async function fetchProblems(): Promise<Problem[]> {
         }
         if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
             throw new ApiError(500, `ネットワークエラー: APIサーバーに接続できません (${apiUrl})`);
+        }
+        throw new ApiError(500, `ネットワークエラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+// 新しい問題を作成
+export async function createProblem(problem: ProblemCreate): Promise<Problem> {
+    const apiUrl = getApiBaseUrl();
+    try {
+        const response = await fetch(`${apiUrl}/problems/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(problem),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new ApiError(response.status, `問題の作成に失敗しました: ${errorText}`);
+        }
+        return response.json();
+    } catch (error) {
+        if (error instanceof ApiError) {
+            throw error;
+        }
+        throw new ApiError(500, `ネットワークエラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+// 既存の問題を更新
+export async function updateProblem(id: number, problem: ProblemCreate): Promise<Problem> {
+    const apiUrl = getApiBaseUrl();
+    try {
+        const response = await fetch(`${apiUrl}/problems/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(problem),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new ApiError(response.status, `問題の更新に失敗しました: ${errorText}`);
+        }
+        return response.json();
+    } catch (error) {
+        if (error instanceof ApiError) {
+            throw error;
+        }
+        throw new ApiError(500, `ネットワークエラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+// 問題を削除
+export async function deleteProblem(id: number): Promise<void> {
+    const apiUrl = getApiBaseUrl();
+    try {
+        const response = await fetch(`${apiUrl}/problems/${id}`, {
+            method: "DELETE",
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new ApiError(response.status, `問題の削除に失敗しました: ${errorText}`);
+        }
+    } catch (error) {
+        if (error instanceof ApiError) {
+            throw error;
         }
         throw new ApiError(500, `ネットワークエラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
