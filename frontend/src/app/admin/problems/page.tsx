@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { fetchProblems, deleteProblem, ApiError } from "@/lib/api";
 import { Problem } from "@/types/api";
 
@@ -12,7 +11,6 @@ export default function AdminProblemsPage() {
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  const router = useRouter();
 
   const loadProblems = async () => {
     try {

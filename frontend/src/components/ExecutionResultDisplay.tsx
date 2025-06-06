@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
 import { SubmissionResponse } from '@/types/api';
 
 interface ExecutionResultDisplayProps {
@@ -186,9 +187,11 @@ const ExecutionResultDisplay: React.FC<ExecutionResultDisplayProps> = ({
             <span className="text-2xl">🤖</span>
             <h3 className="text-lg font-semibold text-blue-900">AIアドバイス</h3>
           </div>
-          <div className="text-blue-800 whitespace-pre-wrap leading-relaxed">
+          <ReactMarkdown
+            className="prose max-w-none text-blue-800"
+          >
             {executionResult.advice_text}
-          </div>
+          </ReactMarkdown>
         </div>
       )}
 
