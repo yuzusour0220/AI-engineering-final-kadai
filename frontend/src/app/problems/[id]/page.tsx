@@ -79,15 +79,13 @@ export default function ProblemPage() {
       // 実行結果表示エリアを表示
       setShowResultArea(true);
 
-      let response: SubmissionResponse;
-      if (file) {
-        response = await submitCodeFile(problem.id, file);
-      } else {
-        response = await submitCode({
-          problem_id: problem.id,
-          user_code: code,
-        });
-      }
+
+      const response = await submitCode({
+        problem_id: problem.id,
+        user_code: code,
+        code_type: "python",
+      });
+
 
       setExecutionResult(response);
     } catch (err) {

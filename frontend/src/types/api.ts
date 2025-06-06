@@ -22,6 +22,7 @@ export interface ProblemCreate {
 export interface SubmissionCreate {
     problem_id: number;
     user_code: string;
+    code_type?: "python" | "notebook";
 }
 
 export interface SubmissionResponse {
