@@ -26,7 +26,7 @@ jobs:
         run: python backend/test/test_docker_basic.py
 
       - name: Start backend container
-        run: docker-compose -f docker-compose.yml up -d backend
+        run: docker compose -f docker-compose.yml up -d backend
 
       - name: Run API smoke test
         run: python backend/test/api_smoke_test.py
