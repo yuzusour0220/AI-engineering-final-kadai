@@ -18,7 +18,7 @@ class ProblemCreate(ProblemBase):
     問題作成時のモデル
     """
 
-    id: int
+    pass  # IDは自動生成されるため、作成時には不要
 
 
 class Problem(ProblemBase):

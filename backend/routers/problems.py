@@ -12,16 +12,8 @@ router = APIRouter()
 @router.post("/problems/", response_model=Problem)
 async def create_problem(problem: ProblemCreate, db: Session = Depends(get_db)):
     """新しい問題を作成する"""
-    # 問題が既に存在するか確認
-    db_problem = db.query(ProblemModel).filter(ProblemModel.id == problem.id).first()
-    if db_problem:
-        raise HTTPException(
-            status_code=400, detail=f"Problem with ID {problem.id} already exists"
-        )
-
-    # 問題をデータベースに保存
+    # 問題をデータベースに保存（IDは自動生成）
     new_problem = ProblemModel(
-        id=problem.id,
         title=problem.title,
         description=problem.description,
         correct_code=problem.correct_code,

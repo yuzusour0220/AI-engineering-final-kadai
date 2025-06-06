@@ -9,11 +9,11 @@ RUN npm cache clean --force && npm install --no-package-lock --force
 # アプリケーションのソースコードをコピー
 COPY . .
 
-# ビルド
-RUN npm run build
+# # ビルド
+# RUN npm run build
 
 # ポートの公開
 EXPOSE 3000
 
 # アプリケーションの起動
-CMD ["npm", "start"]
+CMD ["npm", "run", "dev"]
