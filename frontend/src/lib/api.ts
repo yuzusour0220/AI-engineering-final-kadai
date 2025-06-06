@@ -93,6 +93,10 @@ export async function submitCodeFile(problemId: number, file: File): Promise<Sub
     formData.append("problem_id", String(problemId));
     formData.append("file", file);
 
+    // ファイル拡張子に基づいてcode_typeを設定
+    const codeType = file.name.endsWith(".ipynb") ? "notebook" : "python";
+    formData.append("code_type", codeType);
+
     try {
         const response = await fetch(`${apiUrl}/submissions/upload`, {
             method: "POST",

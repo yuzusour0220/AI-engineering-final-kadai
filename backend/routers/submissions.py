@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 async def _process_submission(
-    *, problem_id: int, user_code: str, db: Session
+    *, problem_id: int, user_code: str, code_type: str, db: Session
 ) -> SubmissionResponse:
     """Problem existence check, code execution, advice generation, DB save."""
     # 問題が存在するか確認
@@ -22,10 +22,10 @@ async def _process_submission(
         )
 
     # Notebookの場合はPythonコードに変換
-    exec_code = submission.user_code
-    if submission.code_type == "notebook":
+    exec_code = user_code
+    if code_type == "notebook":
         try:
-            exec_code = notebook_to_python(submission.user_code)
+            exec_code = notebook_to_python(user_code)
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Notebook parsing error: {e}")
 
@@ -92,7 +92,10 @@ async def create_submission(
 ) -> SubmissionResponse:
     """JSON形式でコード提出を受け付けるエンドポイント"""
     return await _process_submission(
-        problem_id=submission.problem_id, user_code=submission.user_code, db=db
+        problem_id=submission.problem_id,
+        user_code=submission.user_code,
+        code_type=submission.code_type,
+        db=db,
     )
 
 
@@ -100,6 +103,7 @@ async def create_submission(
 async def create_submission_file(
     problem_id: int = Form(...),
     file: UploadFile = File(...),
+    code_type: str = Form("python"),
     db: Session = Depends(get_db),
 ) -> SubmissionResponse:
     """ファイルアップロード形式でコード提出を受け付けるエンドポイント"""
@@ -112,5 +116,6 @@ async def create_submission_file(
     return await _process_submission(
         problem_id=problem_id,
         user_code=user_code,
+        code_type=code_type,
         db=db,
     )

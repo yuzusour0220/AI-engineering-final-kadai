@@ -166,11 +166,11 @@ export default function ProblemPage() {
         {/* コードエディターセクション */}
         <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Pythonコードを入力してください
+            Pythonコード (.py) または Jupyter Notebook (.ipynb) を入力してください
           </h2>
 
           <div className="mb-4">
-            <input type="file" accept=".py" onChange={handleFileChange} />
+            <input type="file" accept=".py,.ipynb" onChange={handleFileChange} />
             {file && (
               <p className="text-sm text-gray-600 mt-1">{file.name}</p>
             )}
