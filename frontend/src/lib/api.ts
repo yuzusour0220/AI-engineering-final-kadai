@@ -85,6 +85,39 @@ export async function submitCode(submission: SubmissionCreate): Promise<Submissi
     }
 }
 
+export async function submitCodeFile(problemId: number, file: File): Promise<SubmissionResponse> {
+    const apiUrl = getApiBaseUrl();
+    console.log(`Submitting code file to ${apiUrl}/submissions/upload`);
+
+    const formData = new FormData();
+    formData.append("problem_id", String(problemId));
+    formData.append("file", file);
+
+    try {
+        const response = await fetch(`${apiUrl}/submissions/upload`, {
+            method: "POST",
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Submit File API Error: ${response.status} - ${errorText}`);
+            throw new ApiError(response.status, "コードファイルの提出に失敗しました");
+        }
+
+        return response.json();
+    } catch (error) {
+        console.error('Submit file error:', error);
+        if (error instanceof ApiError) {
+            throw error;
+        }
+        if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+            throw new ApiError(500, `ネットワークエラー: APIサーバーに接続できません (${apiUrl})`);
+        }
+        throw new ApiError(500, `ネットワークエラー: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
 // 問題リストを取得
 export async function fetchProblems(): Promise<Problem[]> {
     const apiUrl = getApiBaseUrl();
