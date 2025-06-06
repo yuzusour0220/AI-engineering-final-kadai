@@ -1,5 +1,10 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { SubmissionResponse } from '@/types/api';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const markdownPlugins: any[] = [remarkGfm];
 
 interface ExecutionResultDisplayProps {
   executionResult: SubmissionResponse | null;
@@ -186,9 +191,12 @@ const ExecutionResultDisplay: React.FC<ExecutionResultDisplayProps> = ({
             <span className="text-2xl">🤖</span>
             <h3 className="text-lg font-semibold text-blue-900">AIアドバイス</h3>
           </div>
-          <div className="text-blue-800 whitespace-pre-wrap leading-relaxed">
+          <ReactMarkdown
+            className="prose max-w-none text-blue-800"
+            remarkPlugins={markdownPlugins}
+          >
             {executionResult.advice_text}
-          </div>
+          </ReactMarkdown>
         </div>
       )}
 

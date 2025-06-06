@@ -1,4 +1,9 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const markdownPlugins: any[] = [remarkGfm];
 import { SubmissionResponse } from '@/types/api';
 
 interface AdviceDisplayProps {
@@ -96,9 +101,12 @@ const AdviceDisplay: React.FC<AdviceDisplayProps> = ({ executionResult, isLoadin
       {executionResult.advice_text && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-blue-900 mb-3">AIアドバイス</h3>
-          <div className="text-blue-800 whitespace-pre-wrap">
+          <ReactMarkdown
+            className="prose max-w-none text-blue-800"
+            remarkPlugins={markdownPlugins}
+          >
             {executionResult.advice_text}
-          </div>
+          </ReactMarkdown>
         </div>
       )}
     </div>
