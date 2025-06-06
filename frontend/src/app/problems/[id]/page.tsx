@@ -116,7 +116,7 @@ export default function ProblemPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* ナビゲーション */}
       <div className="mb-6">
         <Link
@@ -137,64 +137,61 @@ export default function ProblemPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* 左側: 問題文 */}
-        <div className="space-y-6">
-          <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">問題文</h2>
-            <div className="prose prose-gray max-w-none">
-              <pre className="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded border">
-                {problem.description}
-              </pre>
-            </div>
+      {/* 縦並びレイアウト */}
+      <div className="space-y-8">
+        {/* 問題文セクション */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">問題文</h2>
+          <div className="prose prose-gray max-w-none">
+            <pre className="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded border">
+              {problem.description}
+            </pre>
           </div>
+        </div>
 
-          {/* 実行結果表示エリア */}
-          {showResultArea && (
-            <ExecutionResultDisplay 
-              executionResult={executionResult} 
-              isLoading={isSubmitting} 
+        {/* コードエディターセクション */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Pythonコードを入力してください
+          </h2>
+          
+          <div className="mb-4">
+            <CodeEditor
+              value={code}
+              onChange={setCode}
+              language="python"
+              height="400px"
             />
-          )}
-        </div>
-
-        {/* 右側: コードエディター */}
-        <div className="space-y-6">
-          <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              Pythonコードを入力してください
-            </h2>
-            
-            <div className="mb-4">
-              <CodeEditor
-                value={code}
-                onChange={setCode}
-                language="python"
-                height="400px"
-              />
-            </div>
-
-            {/* エラー表示 */}
-            {error && (
-              <div className="mb-4 bg-red-50 border border-red-200 rounded p-3">
-                <p className="text-red-600 text-sm">{error}</p>
-              </div>
-            )}
-
-            {/* 提出ボタン */}
-            <button
-              onClick={handleSubmit}
-              disabled={isSubmitting || !code.trim()}
-              className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
-                isSubmitting || !code.trim()
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              }`}
-            >
-              {isSubmitting ? "提出中..." : "コードを提出"}
-            </button>
           </div>
+
+          {/* エラー表示 */}
+          {error && (
+            <div className="mb-4 bg-red-50 border border-red-200 rounded p-3">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+
+          {/* 提出ボタン */}
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting || !code.trim()}
+            className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
+              isSubmitting || !code.trim()
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            }`}
+          >
+            {isSubmitting ? "提出中..." : "コードを提出"}
+          </button>
         </div>
+
+        {/* 実行結果・アドバイス表示エリア */}
+        {showResultArea && (
+          <ExecutionResultDisplay 
+            executionResult={executionResult} 
+            isLoading={isSubmitting} 
+          />
+        )}
       </div>
     </div>
   );
