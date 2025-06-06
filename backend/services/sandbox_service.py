@@ -2,9 +2,128 @@
 import asyncio
 import docker
 import time
+import json
 from typing import Optional
 from pydantic import BaseModel
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+import nbformat
+
+
+def notebook_to_python(notebook_str: str) -> str:
+    """Jupyter Notebook文字列からPythonコードを抽出する"""
+    try:
+        # VSCode形式のXMLnotebookかどうかをチェック
+        if notebook_str.strip().startswith("<"):
+            # XMLベースのVSCode notebook形式の処理
+            import re
+
+            # VSCode.Cellタグからコードセルを抽出
+            code_pattern = (
+                r'<VSCode\.Cell[^>]*language="python"[^>]*>(.*?)</VSCode\.Cell>'
+            )
+            matches = re.findall(code_pattern, notebook_str, re.DOTALL)
+
+            code_cells = []
+            for match in matches:
+                # HTMLエンティティをデコードし、余分な空白を削除
+                cell_content = match.strip()
+                if cell_content:
+                    code_cells.append(cell_content)
+
+            return "\n\n".join(code_cells)
+
+        # JSONベースのJupyter notebook形式の処理
+        # まず、文字列レベルでnull値を修正し、制御文字も除去
+        import re
+
+        # 制御文字を除去（改行とタブは保持）
+        cleaned_notebook_str = re.sub(
+            r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]", "", notebook_str
+        )
+
+        # null値を適切な値に置き換え
+        cleaned_notebook_str = cleaned_notebook_str.replace(
+            '"execution_count": null', '"execution_count": 0'
+        )
+        cleaned_notebook_str = cleaned_notebook_str.replace(
+            '"outputs": null', '"outputs": []'
+        )
+        cleaned_notebook_str = cleaned_notebook_str.replace(
+            '"metadata": null', '"metadata": {}'
+        )
+
+        notebook_dict = json.loads(cleaned_notebook_str)
+
+        # 念のため、辞書レベルでもnull値を処理
+        if "cells" in notebook_dict:
+            for cell in notebook_dict["cells"]:
+                if "execution_count" in cell and cell["execution_count"] is None:
+                    cell["execution_count"] = 0
+                if "outputs" in cell and cell["outputs"] is None:
+                    cell["outputs"] = []
+                # metadataのnull値も処理
+                if "metadata" in cell and cell["metadata"] is None:
+                    cell["metadata"] = {}
+
+        # nbformatで再度パース
+        nb = nbformat.from_dict(notebook_dict)
+        code_cells = []
+        for cell in nb.cells:
+            if cell.cell_type == "code":
+                # sourceがリストの場合は結合、文字列の場合はそのまま使用
+                if isinstance(cell.source, list):
+                    # リストの場合、各行を結合（改行文字がない場合は追加）
+                    cell_code = "".join(
+                        line if line.endswith("\n") else line + "\n"
+                        for line in cell.source
+                    ).rstrip("\n")
+                    code_cells.append(cell_code)
+                else:
+                    code_cells.append(cell.source)
+        return "\n\n".join(code_cells)
+
+    except (json.JSONDecodeError, KeyError, Exception) as e:
+        # フォールバック: より簡単な抽出方法を試す
+        try:
+            # 直接正規表現でコードセルを抽出
+            import re
+
+            # JSONのsourceフィールドを直接抽出
+            pattern = r'"cell_type":\s*"code".*?"source":\s*(\[.*?\])'
+            matches = re.findall(pattern, notebook_str, re.DOTALL)
+
+            code_cells = []
+            for match in matches:
+                try:
+                    # JSON配列として解析
+                    source_lines = json.loads(match)
+                    if isinstance(source_lines, list):
+                        code_cells.append("".join(source_lines))
+                    else:
+                        code_cells.append(str(source_lines))
+                except:
+                    continue
+
+            if code_cells:
+                return "\n\n".join(code_cells)
+
+            # 最後の手段: nbformatを使用
+            nb = nbformat.reads(notebook_str, as_version=4)
+            code_cells = []
+            for cell in nb.cells:
+                if cell.cell_type == "code":
+                    if isinstance(cell.source, list):
+                        # リストの場合、各行を結合（改行文字がない場合は追加）
+                        cell_code = "".join(
+                            line if line.endswith("\n") else line + "\n"
+                            for line in cell.source
+                        ).rstrip("\n")
+                        code_cells.append(cell_code)
+                    else:
+                        code_cells.append(cell.source)
+            return "\n\n".join(code_cells)
+        except Exception:
+            raise Exception(f"Failed to parse notebook: {str(e)}")
 
 
 class CodeExecutionResult(BaseModel):
