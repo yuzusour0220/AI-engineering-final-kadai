@@ -51,6 +51,38 @@ const ExecutionResultDisplay: React.FC<ExecutionResultDisplayProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* 正解判定結果 */}
+      {executionResult.is_correct !== undefined && executionResult.is_correct !== null && (
+        <div className={`border-2 rounded-lg p-6 text-center ${
+          executionResult.is_correct
+            ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-300'
+            : 'bg-gradient-to-r from-orange-50 to-red-50 border-orange-300'
+        }`}>
+          <div className="flex items-center justify-center space-x-3 mb-2">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${
+              executionResult.is_correct
+                ? 'bg-green-100 text-green-600'
+                : 'bg-orange-100 text-orange-600'
+            }`}>
+              {executionResult.is_correct ? '🎉' : '📝'}
+            </div>
+            <h3 className={`text-2xl font-bold ${
+              executionResult.is_correct ? 'text-green-700' : 'text-orange-700'
+            }`}>
+              {executionResult.is_correct ? '正解です！' : '不正解です'}
+            </h3>
+          </div>
+          <p className={`text-lg ${
+            executionResult.is_correct ? 'text-green-600' : 'text-orange-600'
+          }`}>
+            {executionResult.is_correct 
+              ? 'おめでとうございます！正しい答えです。' 
+              : 'アドバイスを参考に再挑戦してみましょう。'
+            }
+          </p>
+        </div>
+      )}
+
       {/* メイン実行結果 */}
       <div className={`border rounded-lg p-6 ${
         hasError 
@@ -182,17 +214,40 @@ const ExecutionResultDisplay: React.FC<ExecutionResultDisplayProps> = ({
 
       {/* AIアドバイス */}
       {executionResult.advice_text && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 shadow-sm">
+        <div className={`border rounded-lg p-6 shadow-sm ${
+          executionResult.is_correct
+            ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200'
+            : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200'
+        }`}>
           <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <span className="text-2xl">🤖</span>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+              executionResult.is_correct
+                ? 'bg-green-100'
+                : 'bg-blue-100'
+            }`}>
+              <span className="text-2xl">
+                {executionResult.is_correct ? '🌟' : '🤖'}
+              </span>
             </div>
             <div>
-              <h3 className="text-xl font-semibold text-blue-900">AIアドバイス</h3>
-              <p className="text-sm text-blue-700">コードの改善提案やヒントです</p>
+              <h3 className={`text-xl font-semibold ${
+                executionResult.is_correct ? 'text-green-900' : 'text-blue-900'
+              }`}>
+                {executionResult.is_correct ? '解説・振り返り' : 'AIアドバイス'}
+              </h3>
+              <p className={`text-sm ${
+                executionResult.is_correct ? 'text-green-700' : 'text-blue-700'
+              }`}>
+                {executionResult.is_correct 
+                  ? '正解です！さらなる理解のための解説です'
+                  : 'コードの改善提案やヒントです'
+                }
+              </p>
             </div>
           </div>
-          <div className="bg-white rounded-lg p-4 border border-blue-100">
+          <div className={`bg-white rounded-lg p-4 border ${
+            executionResult.is_correct ? 'border-green-100' : 'border-blue-100'
+          }`}>
             <ReactMarkdown
               className="prose max-w-none text-gray-800 leading-relaxed"
             >

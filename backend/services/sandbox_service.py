@@ -3,7 +3,8 @@ import asyncio
 import docker
 import time
 import json
-from typing import Optional
+import re
+from typing import Optional, List
 from pydantic import BaseModel
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 import nbformat
@@ -143,11 +144,31 @@ def execute_python_code_sync(
     """
     start_time = time.time()
 
+    def extract_pip_packages(code: str) -> List[str]:
+        """コードから pip install が必要なライブラリ名を抽出"""
+        pip_pattern = r"^!pip install\s+(.+)"
+        matches = re.findall(pip_pattern, code, re.MULTILINE)
+        packages = []
+        for match in matches:
+            # パッケージ名をスペースで分割して個別のパッケージとして追加
+            packages.extend(match.strip().split())
+        return packages
+
+    def remove_pip_install_lines(code: str) -> str:
+        """コードから !pip install の行を削除"""
+        pip_pattern = r"^!pip install\s+.+$"
+        return re.sub(pip_pattern, "", code, flags=re.MULTILINE)
+
     def run_container():
         """コンテナ実行を行う内部関数"""
         client = docker.from_env()
 
         try:
+            # pip install が必要なライブラリを抽出
+            pip_packages = extract_pip_packages(user_code)
+            # pip install 行を削除したコードを作成
+            cleaned_code = remove_pip_install_lines(user_code)
+
             # 標準入力がある場合はそれを含めたコードを作成
             if stdin_input:
                 # 標準入力をハードコーディングしたコードを生成
@@ -156,25 +177,44 @@ import sys
 from io import StringIO
 sys.stdin = StringIO('''{stdin_input}''')
 
-{user_code}
+{cleaned_code}
 """
             else:
-                full_code = user_code
+                full_code = cleaned_code
 
-            # コンテナを実行（コードを直接実行）
-            result = client.containers.run(
+            # コンテナを起動
+            container = client.containers.run(
                 image="python-sandbox",
-                command=["python", "-c", full_code],
+                command=["sleep", "30"],  # 一時的にsleepで起動
                 network_disabled=True,
                 mem_limit="128m",
-                remove=True,
-                stderr=True,
-                stdout=True,
+                detach=True,
             )
 
-            stdout = result.decode("utf-8") if result else ""
-            stderr = ""
-            exit_code = 0
+            try:
+                # 必要なライブラリをインストール
+                if pip_packages:
+                    for package in pip_packages:
+                        install_result = container.exec_run(["pip", "install", package])
+                        # インストール結果をログに記録（エラーチェック）
+                        if install_result.exit_code != 0:
+                            print(
+                                f"Warning: Failed to install package {package}: {install_result.output.decode('utf-8')}"
+                            )
+
+                # 実際のコードを実行
+                exec_result = container.exec_run(["python", "-c", full_code])
+
+                stdout = (
+                    exec_result.output.decode("utf-8") if exec_result.output else ""
+                )
+                stderr = ""
+                exit_code = exec_result.exit_code
+
+            finally:
+                # コンテナを停止・削除
+                container.stop()
+                container.remove()
 
         except docker.errors.ContainerError as e:
             # Docker SDK 7.1.0 での ContainerError 処理
@@ -191,14 +231,14 @@ sys.stdin = StringIO('''{stdin_input}''')
         return stdout, stderr, exit_code
 
     try:
-        # タイムアウト付きでコンテナを実行
+        # タイムアウト付きでコンテナを実行（15秒に延長）
         with ThreadPoolExecutor() as executor:
             future = executor.submit(run_container)
             try:
-                stdout, stderr, exit_code = future.result(timeout=5)
+                stdout, stderr, exit_code = future.result(timeout=15)
             except FuturesTimeoutError:
                 stdout = ""
-                stderr = "Code execution timed out (5 seconds)"
+                stderr = "Code execution timed out (15 seconds)"
                 exit_code = 124
 
         # 実行時間を計算

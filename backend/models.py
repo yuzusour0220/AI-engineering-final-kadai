@@ -55,6 +55,7 @@ class SubmissionResponse(BaseModel):
     execution_time_ms: float | None = None  # 実行時間（ミリ秒）
     exit_code: int | None = None  # 終了コード
     advice_text: str | None = None  # AIからのアドバイス
+    is_correct: bool  # 正解判定結果
 
 
 class Submission(BaseModel):
@@ -70,6 +71,7 @@ class Submission(BaseModel):
     execution_time_ms: float | None = None
     exit_code: int | None = None
     advice_text: str | None = None
+    is_correct: bool  # 正解判定結果
     submitted_at: datetime
 
     class Config:

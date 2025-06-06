@@ -29,31 +29,62 @@ async def _process_submission(
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Notebook parsing error: {e}")
 
-    # サンドボックスでコード実行
+    # サンドボックスでユーザーコード実行
     try:
-        execution_result = await execute_python_code_in_docker(
+        user_result = await execute_python_code_in_docker(
             user_code=exec_code,
             stdin_input=problem.test_input,  # test_inputを標準入力として渡す
         )
+
+        # 正解コードも実行して結果を比較
+        is_correct = False
+        try:
+            # 正解コードを実行
+            correct_exec_code = problem.correct_code
+            if problem.correct_code.strip().startswith(("{", "<")):
+                # 正解コードがnotebook形式の場合はPythonコードに変換
+                try:
+                    correct_exec_code = notebook_to_python(problem.correct_code)
+                except Exception:
+                    correct_exec_code = problem.correct_code
+
+            correct_result = await execute_python_code_in_docker(
+                user_code=correct_exec_code,
+                stdin_input=problem.test_input,
+            )
+
+            # 標準出力を比較して正解判定
+            user_stdout = user_result.stdout.strip() if user_result.stdout else ""
+            correct_stdout = (
+                correct_result.stdout.strip() if correct_result.stdout else ""
+            )
+            is_correct = user_stdout == correct_stdout
+
+        except Exception as e:
+            print(f"正解コード実行時にエラー: {e}")
+            # 正解コード実行でエラーが発生した場合は、エラーがなければ正解とみなす
+            is_correct = user_result.exit_code == 0 and not user_result.stderr
 
         advice_text = await generate_advice_with_huggingface(
             problem_title=problem.title,
             problem_description=problem.description,
             user_code=user_code,
-            execution_stdout=execution_result.stdout,
-            execution_stderr=execution_result.stderr,
+            execution_stdout=user_result.stdout,
+            execution_stderr=user_result.stderr,
             correct_code=problem.correct_code,
+            is_correct=is_correct,
         )
 
         # 提出を保存
         new_submission = SubmissionModel(
             problem_id=problem_id,
             user_code=user_code,
-            stdout=execution_result.stdout,
-            stderr=execution_result.stderr,
-            execution_time_ms=execution_result.execution_time_ms,
-            exit_code=execution_result.exit_code,
+            stdout=user_result.stdout,
+            stderr=user_result.stderr,
+            execution_time_ms=user_result.execution_time_ms,
+            exit_code=user_result.exit_code,
             advice_text=advice_text,
+            is_correct=is_correct,
             submitted_at=datetime.now(timezone.utc),
         )
         db.add(new_submission)
@@ -62,11 +93,12 @@ async def _process_submission(
         # レスポンスを返す
         return SubmissionResponse(
             message="コードの実行が完了しました",
-            stdout=execution_result.stdout,
-            stderr=execution_result.stderr,
-            execution_time_ms=execution_result.execution_time_ms,
-            exit_code=execution_result.exit_code,
+            stdout=user_result.stdout,
+            stderr=user_result.stderr,
+            execution_time_ms=user_result.execution_time_ms,
+            exit_code=user_result.exit_code,
             advice_text=advice_text,
+            is_correct=is_correct,
         )
 
     except Exception as e:
@@ -76,13 +108,17 @@ async def _process_submission(
             user_code=user_code,
             stderr=str(e),
             exit_code=-1,
+            is_correct=False,
             submitted_at=datetime.now(timezone.utc),
         )
         db.add(new_submission)
         db.commit()
 
         return SubmissionResponse(
-            message="コードの実行中にエラーが発生しました", stderr=str(e), exit_code=-1
+            message="コードの実行中にエラーが発生しました",
+            stderr=str(e),
+            exit_code=-1,
+            is_correct=False,
         )
 
 

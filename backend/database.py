@@ -1,4 +1,13 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float
+from sqlalchemy import (
+    create_engine,
+    Column,
+    Integer,
+    String,
+    Text,
+    DateTime,
+    Float,
+    Boolean,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timezone
@@ -56,6 +65,7 @@ class SubmissionModel(Base):
     execution_time_ms = Column(Float, nullable=True)  # 実行時間（ミリ秒）
     exit_code = Column(Integer, nullable=True)  # 終了コード
     advice_text = Column(Text, nullable=True)  # AIからのアドバイス保存用
+    is_correct = Column(Boolean, nullable=True)  # 正解判定結果
     submitted_at = Column(DateTime, default=datetime.now(timezone.utc))
 
 

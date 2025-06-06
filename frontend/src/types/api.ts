@@ -32,4 +32,5 @@ export interface SubmissionResponse {
     execution_time_ms?: number | null;  // 実行時間（ミリ秒）
     exit_code?: number | null;  // 終了コード
     advice_text?: string | null;  // AIからのアドバイス（将来用）
+    is_correct: boolean;  // 正解判定結果
 }

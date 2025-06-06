@@ -21,6 +21,7 @@ async def generate_advice_with_huggingface(
     execution_stdout: str | None,
     execution_stderr: str | None,
     correct_code: str | None = None,
+    is_correct: bool = False,
 ) -> str:
     """指定された情報を基にHugging Faceのモデルからアドバイスを生成する"""
 
@@ -38,6 +39,9 @@ async def generate_advice_with_huggingface(
             processed_correct_code = correct_code
 
     prompt_string = f"""
+【判定結果】
+{"正解です！素晴らしい！" if is_correct else "不正解です。"}
+
 あなたは、Pythonプログラミングを学ぶ初学者をサポートする親切なAIアシスタントです。
 以下の情報に基づいて、学習者が自分で間違いに気づき、解決できるようになるためのヒントやアドバイスを生成してください。
 
@@ -46,6 +50,7 @@ async def generate_advice_with_huggingface(
 - 指摘は具体的かつ建設的に行い、学習者のモチベーションを維持するよう努めてください。
 - 難しい専門用語は避け、分かりやすい言葉で説明してください。
 - アドバイスは日本語でお願いします。
+{"- 正解の場合は、コードの改善点や別の解き方などを提案してください。" if is_correct else ""}
 
 【課題情報】
 タイトル: {problem_title}
