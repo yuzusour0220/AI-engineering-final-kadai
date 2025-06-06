@@ -1,4 +1,9 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const markdownPlugins: any[] = [remarkGfm];
 import { SubmissionResponse } from '@/types/api';
 
 interface AdviceDisplayProps {
@@ -92,12 +97,25 @@ const AdviceDisplay: React.FC<AdviceDisplayProps> = ({ executionResult, isLoadin
         )}
       </div>
 
-      {/* AIアドバイス（将来実装予定） */}
+      {/* AIアドバイス */}
       {executionResult.advice_text && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-3">AIアドバイス</h3>
-          <div className="text-blue-800 whitespace-pre-wrap">
-            {executionResult.advice_text}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 shadow-sm">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <span className="text-2xl">🤖</span>
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-blue-900">AIアドバイス</h3>
+              <p className="text-sm text-blue-700">コードの改善提案やヒントです</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg p-4 border border-blue-100">
+            <ReactMarkdown
+              className="prose max-w-none text-gray-800 leading-relaxed"
+              remarkPlugins={markdownPlugins}
+            >
+              {executionResult.advice_text}
+            </ReactMarkdown>
           </div>
         </div>
       )}
