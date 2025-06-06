@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from models import SubmissionCreate, SubmissionResponse
 from database import get_db, SubmissionModel, ProblemModel
@@ -10,40 +10,28 @@ from datetime import datetime, timezone
 router = APIRouter()
 
 
-@router.post("/submissions/", response_model=SubmissionResponse)
-async def create_submission(
-    submission: SubmissionCreate, db: Session = Depends(get_db)
+async def _process_submission(
+    *, problem_id: int, user_code: str, db: Session
 ) -> SubmissionResponse:
-    """
-    コード提出を受け付けるエンドポイント。
-
-    Args:
-        submission: 提出されたコード情報
-        db: データベースセッション
-
-    Returns:
-        実行結果を含むSubmissionResponse
-    """
+    """Problem existence check, code execution, advice generation, DB save."""
     # 問題が存在するか確認
-    problem = (
-        db.query(ProblemModel).filter(ProblemModel.id == submission.problem_id).first()
-    )
+    problem = db.query(ProblemModel).filter(ProblemModel.id == problem_id).first()
     if not problem:
         raise HTTPException(
-            status_code=404, detail=f"Problem with ID {submission.problem_id} not found"
+            status_code=404, detail=f"Problem with ID {problem_id} not found"
         )
 
     # サンドボックスでコード実行
     try:
         execution_result = await execute_python_code_in_docker(
-            user_code=submission.user_code,
+            user_code=user_code,
             stdin_input=problem.test_input,  # test_inputを標準入力として渡す
         )
 
         advice_text = await generate_advice_with_huggingface(
             problem_title=problem.title,
             problem_description=problem.description,
-            user_code=submission.user_code,
+            user_code=user_code,
             execution_stdout=execution_result.stdout,
             execution_stderr=execution_result.stderr,
             correct_code=problem.correct_code,
@@ -51,8 +39,8 @@ async def create_submission(
 
         # 提出を保存
         new_submission = SubmissionModel(
-            problem_id=submission.problem_id,
-            user_code=submission.user_code,
+            problem_id=problem_id,
+            user_code=user_code,
             stdout=execution_result.stdout,
             stderr=execution_result.stderr,
             execution_time_ms=execution_result.execution_time_ms,
@@ -76,8 +64,8 @@ async def create_submission(
     except Exception as e:
         # 実行エラーの場合でも記録は残す
         new_submission = SubmissionModel(
-            problem_id=submission.problem_id,
-            user_code=submission.user_code,
+            problem_id=problem_id,
+            user_code=user_code,
             stderr=str(e),
             exit_code=-1,
             submitted_at=datetime.now(timezone.utc),
@@ -88,3 +76,33 @@ async def create_submission(
         return SubmissionResponse(
             message="コードの実行中にエラーが発生しました", stderr=str(e), exit_code=-1
         )
+
+
+@router.post("/submissions/", response_model=SubmissionResponse)
+async def create_submission(
+    submission: SubmissionCreate, db: Session = Depends(get_db)
+) -> SubmissionResponse:
+    """JSON形式でコード提出を受け付けるエンドポイント"""
+    return await _process_submission(
+        problem_id=submission.problem_id, user_code=submission.user_code, db=db
+    )
+
+
+@router.post("/submissions/upload", response_model=SubmissionResponse)
+async def create_submission_file(
+    problem_id: int = Form(...),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+) -> SubmissionResponse:
+    """ファイルアップロード形式でコード提出を受け付けるエンドポイント"""
+    user_code_bytes = await file.read()
+    try:
+        user_code = user_code_bytes.decode("utf-8")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid file encoding")
+
+    return await _process_submission(
+        problem_id=problem_id,
+        user_code=user_code,
+        db=db,
+    )

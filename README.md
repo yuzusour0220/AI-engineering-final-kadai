@@ -80,6 +80,7 @@ Pythonプログラミングの課題を解いて、AIからアドバイスを受
   - 問題存在確認
   - 提出データのDB保存
   - UTC timezone対応
+  - Pythonファイルアップロードに対応(`/submissions/upload`)
 
 #### 3. **データモデル (`models.py`)**
 - **Pydanticモデル**によるリクエスト/レスポンス検証
