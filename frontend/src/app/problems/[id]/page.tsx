@@ -79,13 +79,19 @@ export default function ProblemPage() {
       // 実行結果表示エリアを表示
       setShowResultArea(true);
 
+      let response: SubmissionResponse;
 
-      const response = await submitCode({
-        problem_id: problem.id,
-        user_code: code,
-        code_type: "python",
-      });
-
+      // ファイルがアップロードされている場合はファイル提出API使用
+      if (file) {
+        response = await submitCodeFile(problem.id, file);
+      } else {
+        // テキスト入力の場合は通常の提出API使用
+        response = await submitCode({
+          problem_id: problem.id,
+          user_code: code,
+          code_type: "python",
+        });
+      }
 
       setExecutionResult(response);
     } catch (err) {

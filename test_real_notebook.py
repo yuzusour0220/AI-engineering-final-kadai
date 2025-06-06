@@ -1,6 +1,4 @@
-import sys# 実際のnotebookファイルを読み込んでテスト
-notebook_path = '/Users/takumisakai/自主勉/AIエンジニアリング/AI-engineering-final-kadai/problematic_notebook.ipynb'mport os
-import json
+import sys
 
 # サービスパスを追加
 sys.path.append(
