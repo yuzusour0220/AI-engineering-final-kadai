@@ -5,6 +5,14 @@ import time
 from typing import Optional
 from pydantic import BaseModel
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+import nbformat
+
+
+def notebook_to_python(notebook_str: str) -> str:
+    """Jupyter Notebook文字列からPythonコードを抽出する"""
+    nb = nbformat.reads(notebook_str, as_version=4)
+    code_cells = [cell.source for cell in nb.cells if cell.cell_type == "code"]
+    return "\n\n".join(code_cells)
 
 
 class CodeExecutionResult(BaseModel):

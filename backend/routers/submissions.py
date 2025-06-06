@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from models import SubmissionCreate, SubmissionResponse
 from database import get_db, SubmissionModel, ProblemModel
-from services.sandbox_service import execute_python_code_in_docker
+from services.sandbox_service import execute_python_code_in_docker, notebook_to_python
 from services.advice_service import generate_advice_with_huggingface
 from datetime import datetime, timezone
 
@@ -33,10 +33,18 @@ async def create_submission(
             status_code=404, detail=f"Problem with ID {submission.problem_id} not found"
         )
 
+    # Notebookの場合はPythonコードに変換
+    exec_code = submission.user_code
+    if submission.code_type == "notebook":
+        try:
+            exec_code = notebook_to_python(submission.user_code)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Notebook parsing error: {e}")
+
     # サンドボックスでコード実行
     try:
         execution_result = await execute_python_code_in_docker(
-            user_code=submission.user_code,
+            user_code=exec_code,
             stdin_input=problem.test_input,  # test_inputを標準入力として渡す
         )
 

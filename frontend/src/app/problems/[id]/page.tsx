@@ -71,6 +71,7 @@ export default function ProblemPage() {
       const response = await submitCode({
         problem_id: problem.id,
         user_code: code,
+        code_type: "python",
       });
 
       setExecutionResult(response);

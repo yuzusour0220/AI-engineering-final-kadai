@@ -41,6 +41,7 @@ class SubmissionCreate(BaseModel):
 
     problem_id: int
     user_code: str
+    code_type: str = "python"  # "python" または "notebook"
 
 
 class SubmissionResponse(BaseModel):
