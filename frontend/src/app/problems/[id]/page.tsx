@@ -130,7 +130,7 @@ export default function ProblemPage() {
       {/* ヘッダー */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          問題 {problem.id}: {problem.title}
+          {problem.title}
         </h1>
         <div className="text-sm text-gray-500">
           作成日: {new Date(problem.created_at).toLocaleDateString("ja-JP")}
