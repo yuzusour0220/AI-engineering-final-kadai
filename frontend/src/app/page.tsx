@@ -47,15 +47,6 @@ export default function Home() {
     setFilteredProblems(filtered);
   }, [searchTerm, problems]);
 
-  const getDifficultyBadge = (index: number) => {
-    const difficulties = [
-      { label: "初級", color: "bg-green-100 text-green-800" },
-      { label: "中級", color: "bg-yellow-100 text-yellow-800" },
-      { label: "上級", color: "bg-red-100 text-red-800" },
-    ];
-    return difficulties[index % difficulties.length];
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("ja-JP", {
       year: 'numeric',
@@ -75,9 +66,6 @@ export default function Home() {
                 課題
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                難易度
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 作成日
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -86,8 +74,7 @@ export default function Home() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredProblems.map((problem, index) => {
-              const difficulty = getDifficultyBadge(index);
+            {filteredProblems.map((problem) => {
               return (
                 <tr key={problem.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4">
@@ -101,11 +88,6 @@ export default function Home() {
                           : problem.description}
                       </div>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${difficulty.color}`}>
-                      {difficulty.label}
-                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatDate(problem.created_at)}
@@ -133,18 +115,14 @@ export default function Home() {
   // グリッド表示のコンポーネント
   const ProblemGridView = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {filteredProblems.map((problem, index) => {
-        const difficulty = getDifficultyBadge(index);
+      {filteredProblems.map((problem) => {
         return (
           <Link
             key={problem.id}
             href={`/problems/${problem.id}`}
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md hover:border-blue-300 transition-all duration-200 group"
           >
-            <div className="flex justify-between items-start mb-3">
-              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${difficulty.color}`}>
-                {difficulty.label}
-              </span>
+            <div className="flex justify-end items-start mb-3">
               <svg className="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
@@ -171,6 +149,18 @@ export default function Home() {
       <div className="container mx-auto px-4 max-w-7xl">
         {/* ヘッダー */}
         <div className="text-center mb-8">
+          <div className="flex justify-end mb-4">
+            <Link
+              href="/admin/problems"
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              管理画面
+            </Link>
+          </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             プログラミング課題システム
           </h1>
