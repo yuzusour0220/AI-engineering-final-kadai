@@ -2,6 +2,7 @@
 from huggingface_hub import InferenceClient
 import os
 from dotenv import load_dotenv
+from .sandbox_service import notebook_to_python
 
 load_dotenv()
 # 使用するモデル名
@@ -22,6 +23,19 @@ async def generate_advice_with_huggingface(
     correct_code: str | None = None,
 ) -> str:
     """指定された情報を基にHugging Faceのモデルからアドバイスを生成する"""
+
+    # 正解コードがnotebook形式の場合、Pythonコードに変換
+    processed_correct_code = None
+    if correct_code:
+        try:
+            # JSONかXML形式かを判定してnotebook処理を試す
+            if correct_code.strip().startswith(("{", "<")):
+                processed_correct_code = notebook_to_python(correct_code)
+            else:
+                processed_correct_code = correct_code
+        except Exception:
+            # notebook処理に失敗した場合は元のコードを使用
+            processed_correct_code = correct_code
 
     prompt_string = f"""
 あなたは、Pythonプログラミングを学ぶ初学者をサポートする親切なAIアシスタントです。
@@ -56,13 +70,23 @@ async def generate_advice_with_huggingface(
 2.  **エラーがないが期待通りに動作しない場合 (または改善点がある場合):**
     - コードのロジックで改善できる点や、より効率的な書き方があれば示唆してください。
     - 変数名やコメントの付け方など、読みやすいコードにするための一般的なアドバイスも適宜含めてください。
-    - (もし `correct_code` が提供されていれば、それを直接見せるのではなく、学習者のコードとの違いからヒントを得られるような問いかけをしてください)
+    - (もし正解コードが提供されていれば、それを直接見せるのではなく、学習者のコードとの違いからヒントを得られるような問いかけをしてください)
 3.  **よくある間違いの指摘:**
     - 初学者が陥りやすい間違いのパターンに合致する場合は、それとなく教えてあげてください。
       (例: for文の範囲、インデックスエラー、無限ループの可能性など)
 
-上記を踏まえて、学習者へのアドバイスを生成してください。
 """
+
+    # 正解コードがある場合はプロンプトに追加
+    if processed_correct_code:
+        prompt_string += f"""【参考：正解コード】
+```python
+{processed_correct_code}
+```
+
+"""
+
+    prompt_string += "上記を踏まえて、学習者へのアドバイスを生成してください。"
 
     try:
         completion = client.chat.completions.create(

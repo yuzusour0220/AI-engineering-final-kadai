@@ -11,10 +11,19 @@ export default function NewProblemPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [correctCode, setCorrectCode] = useState("");
+  const [correctCodeFile, setCorrectCodeFile] = useState<File | null>(null);
   const [testInput, setTestInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
+
+  const handleCorrectCodeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0] || null;
+    setCorrectCodeFile(selected);
+    if (selected) {
+      selected.text().then(setCorrectCode);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,6 +127,22 @@ export default function NewProblemPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 正解コード <span className="text-red-500">*</span>
               </label>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-600 mb-2">
+                  ファイルをアップロード (.py または .ipynb)
+                </label>
+                <input 
+                  type="file" 
+                  accept=".py,.ipynb" 
+                  onChange={handleCorrectCodeFileChange}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                {correctCodeFile && (
+                  <p className="text-sm text-gray-600 mt-1">{correctCodeFile.name}</p>
+                )}
+              </div>
+
               <div className="border border-gray-300 rounded-md overflow-hidden">
                 <CodeEditor 
                   value={correctCode} 
@@ -127,7 +152,7 @@ export default function NewProblemPage() {
                 />
               </div>
               <p className="mt-1 text-sm text-gray-500">
-                この課題の模範解答となるPythonコードを入力してください
+                この課題の模範解答となるPythonコードまたはJupyter Notebookを入力、またはファイルをアップロードしてください
               </p>
             </div>
 
