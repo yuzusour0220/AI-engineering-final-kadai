@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Build sandbox image
+        run: docker build -t python-sandbox backend/sandbox_docker
+
+      - name: Run Docker basic test
+        run: python backend/test/test_docker_basic.py
+
+      - name: Start backend container
+        run: docker-compose -f docker-compose.yml up -d backend
+
+      - name: Run API smoke test
+        run: python backend/test/api_smoke_test.py
+
+      - name: Shutdown containers
+        if: always()
+        run: docker-compose -f docker-compose.yml down
