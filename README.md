@@ -82,7 +82,9 @@ Pythonプログラミングの課題を解いて、AIからアドバイスを受
   - 問題存在確認
   - 提出データのDB保存
   - UTC timezone対応
+
   - PythonスクリプトだけでなくJupyter Notebook(JSON形式)の提出にも対応
+
 
 #### 3. **データモデル (`models.py`)**
 - **Pydanticモデル**によるリクエスト/レスポンス検証

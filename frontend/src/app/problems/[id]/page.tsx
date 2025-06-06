@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import CodeEditor from "@/components/CodeEditor";
 import ExecutionResultDisplay from "@/components/ExecutionResultDisplay";
-import { fetchProblem, submitCode, ApiError } from "@/lib/api";
+import { fetchProblem, submitCode, submitCodeFile, ApiError } from "@/lib/api";
 import { Problem, SubmissionResponse } from "@/types/api";
 
 export default function ProblemPage() {
@@ -14,11 +14,22 @@ export default function ProblemPage() {
 
   const [problem, setProblem] = useState<Problem | null>(null);
   const [code, setCode] = useState<string>("");
+  const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [executionResult, setExecutionResult] = useState<SubmissionResponse | null>(null);
   const [showResultArea, setShowResultArea] = useState(false);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0] || null;
+    setFile(selected);
+    if (selected) {
+      selected.text().then(setCode);
+    } else {
+      setCode("");
+    }
+  };
 
   // 問題データを取得
   useEffect(() => {
@@ -55,8 +66,8 @@ export default function ProblemPage() {
 
   // コード提出処理
   const handleSubmit = async () => {
-    if (!problem || !code.trim()) {
-      setError("コードを入力してください");
+    if (!problem || (!code.trim() && !file)) {
+      setError("コードを入力するかファイルを選択してください");
       return;
     }
 
@@ -68,11 +79,13 @@ export default function ProblemPage() {
       // 実行結果表示エリアを表示
       setShowResultArea(true);
 
+
       const response = await submitCode({
         problem_id: problem.id,
         user_code: code,
         code_type: "python",
       });
+
 
       setExecutionResult(response);
     } catch (err) {
@@ -155,7 +168,14 @@ export default function ProblemPage() {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             Pythonコードを入力してください
           </h2>
-          
+
+          <div className="mb-4">
+            <input type="file" accept=".py" onChange={handleFileChange} />
+            {file && (
+              <p className="text-sm text-gray-600 mt-1">{file.name}</p>
+            )}
+          </div>
+
           <div className="mb-4">
             <CodeEditor
               value={code}
@@ -175,9 +195,9 @@ export default function ProblemPage() {
           {/* 提出ボタン */}
           <button
             onClick={handleSubmit}
-            disabled={isSubmitting || !code.trim()}
+            disabled={isSubmitting || (!code.trim() && !file)}
             className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
-              isSubmitting || !code.trim()
+              isSubmitting || (!code.trim() && !file)
                 ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                 : "bg-blue-600 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             }`}
