@@ -105,7 +105,9 @@ async def _process_submission(
             # お手本の実行結果を追加
             correct_stdout=correct_result.stdout if correct_result else None,
             correct_stderr=correct_result.stderr if correct_result else None,
-            correct_execution_time_ms=correct_result.execution_time_ms if correct_result else None,
+            correct_execution_time_ms=correct_result.execution_time_ms
+            if correct_result
+            else None,
         )
 
     except Exception as e:
