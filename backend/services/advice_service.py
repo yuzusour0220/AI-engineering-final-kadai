@@ -3,15 +3,25 @@ from huggingface_hub import InferenceClient
 import os
 from dotenv import load_dotenv
 from .sandbox_service import notebook_to_python
+from openai import OpenAI
+from google import genai
 
 load_dotenv()
-# 使用するモデル名
-HUGGINGFACE_MODEL_ID = "Qwen/Qwen2.5-72B-Instruct"
-# Hugging Face InferenceClient を初期化
-client = InferenceClient(
-    provider="nebius",  # または "huggingface" など適切なプロバイダーを指定
-    token=os.getenv("HUGGINGFACE_API_KEY"),
-)
+# Google GenAI APIを使用する場合
+client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+
+# # OpenAI APIを使用する場合
+# client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# OPENAI_MODEL = "gpt-4.1-nano"
+
+# # Hugging Face APIを使用する場合
+# # 使用するモデル名
+# HUGGINGFACE_MODEL_ID = "Qwen/Qwen2.5-7B-Instruct"
+# # Hugging Face InferenceClient を初期化
+# client = InferenceClient(
+#     provider="together",  # または "huggingface" など適切なプロバイダーを指定
+#     token=os.getenv("HUGGINGFACE_API_KEY"),
+# )
 
 
 async def generate_advice_with_huggingface(
@@ -94,12 +104,28 @@ async def generate_advice_with_huggingface(
     prompt_string += "上記を踏まえて、学習者へのアドバイスを生成してください。"
 
     try:
-        completion = client.chat.completions.create(
-            model=HUGGINGFACE_MODEL_ID,
-            messages=[{"role": "user", "content": prompt_string}],
-            max_tokens=1500,
+        ## Hugging Face APIを使用してアドバイスを生成する場合
+        # completion = client.chat.completions.create(
+        #     model=HUGGINGFACE_MODEL_ID,
+        #     messages=[{"role": "user", "content": prompt_string}],
+        #     max_tokens=1500,
+        # )
+        # advice_text = completion.choices[0].message.content
+
+        # # OpenAI APIを使用してアドバイスを生成する場合
+        # response = client.responses.create(
+        #     model=OPENAI_MODEL,
+        #     input=[{"role": "user", "content": prompt_string}],
+        # )
+        # advice_text = response.output_text
+
+        # Google GenAI APIを使用してアドバイスを生成する場合
+        response = client.models.generate_content(
+            model="gemini-2.0-flash-lite",
+            contents=prompt_string,
         )
-        advice_text = completion.choices[0].message.content
+        advice_text = response.text
+
         return advice_text
     except Exception as e:
         print(f"Hugging Face API呼び出し中にエラーが発生しました: {e}")
