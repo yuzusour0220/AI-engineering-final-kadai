@@ -2,17 +2,17 @@
 # プロジェクトで使用されているPython 3.13-slimをベースイメージとして使用
 FROM python:3.13-slim
 
-# システムの更新とセキュリティパッケージのインストール
-# 科学計算ライブラリのビルドに必要なツールを追加
-RUN apt-get update && apt-get install -y \
-    --no-install-recommends \
-    build-essential \
-    gcc \
-    g++ \
-    gfortran \
-    libopenblas-dev \
-    liblapack-dev \
-    && rm -rf /var/lib/apt/lists/*
+# # システムの更新とセキュリティパッケージのインストール
+# # 科学計算ライブラリのビルドに必要なツールを追加
+# RUN apt-get update && apt-get install -y \
+#     --no-install-recommends \
+#     build-essential \
+#     gcc \
+#     g++ \
+#     gfortran \
+#     libopenblas-dev \
+#     liblapack-dev \
+#     && rm -rf /var/lib/apt/lists/*
 
 # よく使用される科学計算・データ分析ライブラリを事前インストール
 # これにより、実行時のインストール時間を短縮し、よくあるライブラリは確実に利用可能になる
