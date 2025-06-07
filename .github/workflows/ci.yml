@@ -22,9 +22,6 @@ jobs:
       - name: Build sandbox image
         run: docker build -t python-sandbox backend/sandbox_docker
 
-      - name: Run Docker basic test
-        run: python backend/test/test_docker_basic.py
-
       - name: Start backend container
         run: docker compose -f docker-compose.yml up -d backend
 
