@@ -33,4 +33,8 @@ export interface SubmissionResponse {
     exit_code?: number | null;  // 終了コード
     advice_text?: string | null;  // AIからのアドバイス（将来用）
     is_correct: boolean;  // 正解判定結果
+    // お手本の実行結果
+    correct_stdout?: string | null;  // お手本の標準出力
+    correct_stderr?: string | null;  // お手本の標準エラー
+    correct_execution_time_ms?: number | null;  // お手本の実行時間
 }

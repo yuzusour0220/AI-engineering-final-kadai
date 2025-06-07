@@ -38,6 +38,7 @@ async def _process_submission(
 
         # 正解コードも実行して結果を比較
         is_correct = False
+        correct_result = None  # 正解コードの実行結果を保存
         try:
             # 正解コードを実行
             correct_exec_code = problem.correct_code
@@ -58,6 +59,8 @@ async def _process_submission(
             correct_stdout = (
                 correct_result.stdout.strip() if correct_result.stdout else ""
             )
+            print(f"User stdout: {user_stdout}")
+            print(f"Correct stdout: {correct_stdout}")
             is_correct = user_stdout == correct_stdout
 
         except Exception as e:
@@ -65,16 +68,15 @@ async def _process_submission(
             # 正解コード実行でエラーが発生した場合は、エラーがなければ正解とみなす
             is_correct = user_result.exit_code == 0 and not user_result.stderr
 
-        # advice_text = await generate_advice_with_huggingface(
-        #     problem_title=problem.title,
-        #     problem_description=problem.description,
-        #     user_code=user_code,
-        #     execution_stdout=user_result.stdout,
-        #     execution_stderr=user_result.stderr,
-        #     correct_code=problem.correct_code,
-        #     is_correct=is_correct,
-        # )
-        advice_text = "test"
+        advice_text = await generate_advice_with_huggingface(
+            problem_title=problem.title,
+            problem_description=problem.description,
+            user_code=user_code,
+            execution_stdout=user_result.stdout,
+            execution_stderr=user_result.stderr,
+            correct_code=problem.correct_code,
+            is_correct=is_correct,
+        )
 
         # 提出を保存
         new_submission = SubmissionModel(
@@ -100,6 +102,10 @@ async def _process_submission(
             exit_code=user_result.exit_code,
             advice_text=advice_text,
             is_correct=is_correct,
+            # お手本の実行結果を追加
+            correct_stdout=correct_result.stdout if correct_result else None,
+            correct_stderr=correct_result.stderr if correct_result else None,
+            correct_execution_time_ms=correct_result.execution_time_ms if correct_result else None,
         )
 
     except Exception as e:

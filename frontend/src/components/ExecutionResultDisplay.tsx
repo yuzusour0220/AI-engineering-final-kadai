@@ -212,6 +212,75 @@ const ExecutionResultDisplay: React.FC<ExecutionResultDisplayProps> = ({
         )}
       </div>
 
+      {/* お手本の実行結果 */}
+      {(executionResult.correct_stdout || executionResult.correct_stderr || executionResult.correct_execution_time_ms) && (
+        <div className="border rounded-lg p-6 shadow-sm bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
+          {/* ヘッダー */}
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full text-lg font-bold bg-amber-100 text-amber-600">
+                📋
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-amber-900">
+                  お手本の実行結果
+                </h3>
+                <p className="text-sm text-amber-700">
+                  正解コードの実行結果です
+                </p>
+              </div>
+            </div>
+            
+            {/* 実行統計 */}
+            <div className="text-right space-y-1">
+              {executionResult.correct_execution_time_ms !== null && executionResult.correct_execution_time_ms !== undefined && (
+                <div className="text-sm font-medium text-amber-700">
+                  ⏱️ {Math.round(executionResult.correct_execution_time_ms)}ms
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* お手本の標準出力 */}
+          {executionResult.correct_stdout && executionResult.correct_stdout.trim() && (
+            <div className="mb-4">
+              <div className="flex items-center space-x-2 mb-2">
+                <span className="text-lg">📄</span>
+                <h4 className="font-medium text-amber-800">
+                  出力結果:
+                </h4>
+              </div>
+              <div className="bg-amber-100 border-amber-200 border rounded-lg relative">
+                <pre className="text-sm p-4 whitespace-pre-wrap overflow-x-auto text-amber-900">
+                  {executionResult.correct_stdout}
+                </pre>
+                <div className="absolute top-2 right-2 text-xs bg-amber-200 text-amber-700 px-2 py-1 rounded">
+                  stdout
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* お手本の標準エラー */}
+          {executionResult.correct_stderr && executionResult.correct_stderr.trim() && (
+            <div className="mb-4">
+              <div className="flex items-center space-x-2 mb-2">
+                <span className="text-lg">⚠️</span>
+                <h4 className="font-medium text-red-800">お手本のエラー出力:</h4>
+              </div>
+              <div className="bg-red-100 border border-red-200 rounded-lg relative">
+                <pre className="text-sm text-red-900 p-4 whitespace-pre-wrap overflow-x-auto">
+                  {executionResult.correct_stderr}
+                </pre>
+                <div className="absolute top-2 right-2 text-xs bg-red-200 text-red-700 px-2 py-1 rounded">
+                  stderr
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* AIアドバイス */}
       {executionResult.advice_text && (
         <div className={`border rounded-lg p-6 shadow-sm ${

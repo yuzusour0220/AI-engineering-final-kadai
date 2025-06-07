@@ -56,6 +56,10 @@ class SubmissionResponse(BaseModel):
     exit_code: int | None = None  # 終了コード
     advice_text: str | None = None  # AIからのアドバイス
     is_correct: bool  # 正解判定結果
+    # お手本の実行結果
+    correct_stdout: str | None = None  # お手本の標準出力
+    correct_stderr: str | None = None  # お手本の標準エラー
+    correct_execution_time_ms: float | None = None  # お手本の実行時間
 
 
 class Submission(BaseModel):
