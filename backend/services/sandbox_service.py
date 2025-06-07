@@ -6,11 +6,15 @@ import json
 import re
 import logging
 from typing import Optional, List
+from pathlib import Path
 from pydantic import BaseModel
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 import nbformat
 
 logger = logging.getLogger(__name__)
+
+# パス設定: サンドボックス用Dockerfileディレクトリ
+SANDBOX_DOCKER_PATH = Path(__file__).resolve().parent.parent / "sandbox_docker"
 
 
 def notebook_to_python(notebook_str: str) -> str:
@@ -139,6 +143,17 @@ class CodeExecutionResult(BaseModel):
     succeeded: bool
 
 
+def ensure_sandbox_image(client: docker.DockerClient) -> None:
+    """Ensure the sandbox image exists; build it if missing."""
+    try:
+        client.images.get("python-sandbox")
+    except docker.errors.ImageNotFound:
+        logger.info("python-sandbox image not found. Building...")
+        client.images.build(path=str(SANDBOX_DOCKER_PATH), tag="python-sandbox")
+    except Exception as exc:  # pragma: no cover - best effort logging
+        logger.warning("Failed to verify sandbox image: %s", exc)
+
+
 def execute_python_code_sync(
     user_code: str, stdin_input: Optional[str] = None
 ) -> CodeExecutionResult:
@@ -215,6 +230,9 @@ def execute_python_code_sync(
         """コンテナ実行を行う内部関数"""
         client = docker.from_env()
 
+        # イメージが無ければ自動でビルド
+        ensure_sandbox_image(client)
+
         try:
             # pip install が必要なライブラリを抽出
             pip_packages = extract_pip_packages(user_code)
@@ -237,8 +255,8 @@ sys.stdin = StringIO('''{stdin_input}''')
             # コンテナを起動
             container = client.containers.run(
                 image="python-sandbox",
-                command=["sleep", "30"],  # 一時的にsleepで起動
-                network_disabled=True,
+                command=["sleep", "180"],  # 一時的にsleepで起動（3分間に延長）
+                network_disabled=False,
                 mem_limit="128m",
                 detach=True,
             )
@@ -279,17 +297,29 @@ sys.stdin = StringIO('''{stdin_input}''')
                                     if install_result.output
                                     else "Unknown error"
                                 )
-                                logger.warning("Failed to install package %s: %s", package, error_msg)
+                                logger.warning(
+                                    "Failed to install package %s: %s",
+                                    package,
+                                    error_msg,
+                                )
 
                         except Exception as e:
                             failed_packages.append(package)
-                            logger.warning("Exception during package installation %s: %s", package, str(e))
+                            logger.warning(
+                                "Exception during package installation %s: %s",
+                                package,
+                                str(e),
+                            )
 
                     # インストール結果をログに記録
                     if installed_packages:
-                        logger.info("Successfully installed packages: %s", installed_packages)
+                        logger.info(
+                            "Successfully installed packages: %s", installed_packages
+                        )
                     if failed_packages:
-                        logger.warning("Failed to install packages: %s", failed_packages)
+                        logger.warning(
+                            "Failed to install packages: %s", failed_packages
+                        )
                         # 失敗したパッケージがあることをstderrに記録（ユーザーに通知）
                         if not stderr:
                             stderr = f"Warning: Could not install some packages: {', '.join(failed_packages)}\n"
@@ -327,14 +357,14 @@ sys.stdin = StringIO('''{stdin_input}''')
         return stdout, stderr, exit_code
 
     try:
-        # タイムアウト付きでコンテナを実行（30秒に延長してパッケージインストールに対応）
+        # タイムアウト付きでコンテナを実行（3分間に延長してパッケージインストールに対応）
         with ThreadPoolExecutor() as executor:
             future = executor.submit(run_container)
             try:
-                stdout, stderr, exit_code = future.result(timeout=30)
+                stdout, stderr, exit_code = future.result(timeout=180)
             except FuturesTimeoutError:
                 stdout = ""
-                stderr = "Code execution timed out (30 seconds)"
+                stderr = "Code execution timed out (180 seconds)"
                 exit_code = 124
 
         # 実行時間を計算

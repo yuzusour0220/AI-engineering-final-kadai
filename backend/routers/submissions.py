@@ -78,6 +78,8 @@ async def _process_submission(
             execution_stdout=user_result.stdout,
             execution_stderr=user_result.stderr,
             correct_code=problem.correct_code,
+            correct_stdout=correct_result.stdout if correct_result else None,
+            correct_stderr=correct_result.stderr if correct_result else None,
             is_correct=is_correct,
         )
 
