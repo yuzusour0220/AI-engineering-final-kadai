@@ -3,11 +3,8 @@ from huggingface_hub import InferenceClient
 import os
 from dotenv import load_dotenv
 from .sandbox_service import notebook_to_python
-import logging
-logger = logging.getLogger(__name__)
 from openai import OpenAI
 from google import genai
-
 
 load_dotenv()
 # Google GenAI APIを使用する場合
@@ -123,13 +120,14 @@ async def generate_advice_with_huggingface(
         # advice_text = response.output_text
 
         # Google GenAI APIを使用してアドバイスを生成する場合
-        response = client.models.generate_content(
-            model="gemini-2.0-flash-lite",
-            contents=prompt_string,
-        )
-        advice_text = response.text
+        # response = client.models.generate_content(
+        #     model="gemini-2.0-flash-lite",
+        #     contents=prompt_string,
+        # )
+        # advice_text = response.text
+        advice_text = "test"
 
         return advice_text
     except Exception as e:
-        logger.error("Hugging Face API呼び出し中にエラーが発生しました: %s", e)
+        print(f"Hugging Face API呼び出し中にエラーが発生しました: {e}")
         return "申し訳ありません。アドバイスの生成中にエラーが発生しました。"
