@@ -65,15 +65,16 @@ async def _process_submission(
             # 正解コード実行でエラーが発生した場合は、エラーがなければ正解とみなす
             is_correct = user_result.exit_code == 0 and not user_result.stderr
 
-        advice_text = await generate_advice_with_huggingface(
-            problem_title=problem.title,
-            problem_description=problem.description,
-            user_code=user_code,
-            execution_stdout=user_result.stdout,
-            execution_stderr=user_result.stderr,
-            correct_code=problem.correct_code,
-            is_correct=is_correct,
-        )
+        # advice_text = await generate_advice_with_huggingface(
+        #     problem_title=problem.title,
+        #     problem_description=problem.description,
+        #     user_code=user_code,
+        #     execution_stdout=user_result.stdout,
+        #     execution_stderr=user_result.stderr,
+        #     correct_code=problem.correct_code,
+        #     is_correct=is_correct,
+        # )
+        advice_text = "test"
 
         # 提出を保存
         new_submission = SubmissionModel(
