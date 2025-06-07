@@ -3,8 +3,11 @@ from huggingface_hub import InferenceClient
 import os
 from dotenv import load_dotenv
 from .sandbox_service import notebook_to_python
+import logging
+logger = logging.getLogger(__name__)
 from openai import OpenAI
 from google import genai
+
 
 load_dotenv()
 # Google GenAI APIを使用する場合
@@ -128,5 +131,5 @@ async def generate_advice_with_huggingface(
 
         return advice_text
     except Exception as e:
-        print(f"Hugging Face API呼び出し中にエラーが発生しました: {e}")
+        logger.error("Hugging Face API呼び出し中にエラーが発生しました: %s", e)
         return "申し訳ありません。アドバイスの生成中にエラーが発生しました。"

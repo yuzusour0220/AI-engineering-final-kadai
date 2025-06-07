@@ -2,6 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import problems, submissions
 from database import create_tables
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 # データベーステーブルを作成
 create_tables()

@@ -5,6 +5,9 @@ from database import get_db, SubmissionModel, ProblemModel
 from services.sandbox_service import execute_python_code_in_docker, notebook_to_python
 from services.advice_service import generate_advice_with_huggingface
 from datetime import datetime, timezone
+import logging
+
+logger = logging.getLogger(__name__)
 
 # コード提出に関するエンドポイントをグループ化するためのルーター
 router = APIRouter()
@@ -59,12 +62,12 @@ async def _process_submission(
             correct_stdout = (
                 correct_result.stdout.strip() if correct_result.stdout else ""
             )
-            print(f"User stdout: {user_stdout}")
-            print(f"Correct stdout: {correct_stdout}")
+            logger.debug("User stdout: %s", user_stdout)
+            logger.debug("Correct stdout: %s", correct_stdout)
             is_correct = user_stdout == correct_stdout
 
         except Exception as e:
-            print(f"正解コード実行時にエラー: {e}")
+            logger.warning("正解コード実行時にエラー: %s", e)
             # 正解コード実行でエラーが発生した場合は、エラーがなければ正解とみなす
             is_correct = user_result.exit_code == 0 and not user_result.stderr
 

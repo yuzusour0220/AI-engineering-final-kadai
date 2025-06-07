@@ -4,10 +4,13 @@ import docker
 import time
 import json
 import re
+import logging
 from typing import Optional, List
 from pydantic import BaseModel
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 import nbformat
+
+logger = logging.getLogger(__name__)
 
 
 def notebook_to_python(notebook_str: str) -> str:
@@ -192,7 +195,7 @@ def execute_python_code_sync(
             if validate_package_name(pkg):
                 safe_packages.append(pkg)
             else:
-                print(f"Warning: Potentially unsafe package name rejected: {pkg}")
+                logger.warning("Potentially unsafe package name rejected: %s", pkg)
 
         return safe_packages
 
@@ -246,7 +249,7 @@ sys.stdin = StringIO('''{stdin_input}''')
 
                 # 必要なライブラリをインストール
                 if pip_packages:
-                    print(f"Installing packages: {pip_packages}")
+                    logger.info("Installing packages: %s", pip_packages)
                     installed_packages = []
                     failed_packages = []
 
@@ -268,7 +271,7 @@ sys.stdin = StringIO('''{stdin_input}''')
 
                             if install_result.exit_code == 0:
                                 installed_packages.append(package)
-                                print(f"Successfully installed: {package}")
+                                logger.info("Successfully installed: %s", package)
                             else:
                                 failed_packages.append(package)
                                 error_msg = (
@@ -276,21 +279,17 @@ sys.stdin = StringIO('''{stdin_input}''')
                                     if install_result.output
                                     else "Unknown error"
                                 )
-                                print(
-                                    f"Warning: Failed to install package {package}: {error_msg}"
-                                )
+                                logger.warning("Failed to install package %s: %s", package, error_msg)
 
                         except Exception as e:
                             failed_packages.append(package)
-                            print(
-                                f"Exception during package installation {package}: {str(e)}"
-                            )
+                            logger.warning("Exception during package installation %s: %s", package, str(e))
 
                     # インストール結果をログに記録
                     if installed_packages:
-                        print(f"Successfully installed packages: {installed_packages}")
+                        logger.info("Successfully installed packages: %s", installed_packages)
                     if failed_packages:
-                        print(f"Failed to install packages: {failed_packages}")
+                        logger.warning("Failed to install packages: %s", failed_packages)
                         # 失敗したパッケージがあることをstderrに記録（ユーザーに通知）
                         if not stderr:
                             stderr = f"Warning: Could not install some packages: {', '.join(failed_packages)}\n"
