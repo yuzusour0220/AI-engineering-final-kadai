@@ -86,11 +86,6 @@ async def update_problem(
             status_code=404, detail=f"Problem with ID {problem_id} not found"
         )
 
-    # IDが一致しているか確認
-    if updated_problem.id != problem_id:
-        raise HTTPException(
-            status_code=400, detail="Problem ID in path and body must match"
-        )
 
     # 問題を更新
     db_problem.title = updated_problem.title
