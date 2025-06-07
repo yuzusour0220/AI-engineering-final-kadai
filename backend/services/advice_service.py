@@ -2,15 +2,29 @@
 from huggingface_hub import InferenceClient
 import os
 from dotenv import load_dotenv
+from .sandbox_service import notebook_to_python
+import logging
+logger = logging.getLogger(__name__)
+from openai import OpenAI
+from google import genai
+
 
 load_dotenv()
-# 使用するモデル名
-HUGGINGFACE_MODEL_ID = "Qwen/Qwen2.5-72B-Instruct"
-# Hugging Face InferenceClient を初期化
-client = InferenceClient(
-    provider="nebius",  # または "huggingface" など適切なプロバイダーを指定
-    token=os.getenv("HUGGINGFACE_API_KEY"),
-)
+# Google GenAI APIを使用する場合
+client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+
+# # OpenAI APIを使用する場合
+# client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# OPENAI_MODEL = "gpt-4.1-nano"
+
+# # Hugging Face APIを使用する場合
+# # 使用するモデル名
+# HUGGINGFACE_MODEL_ID = "Qwen/Qwen2.5-7B-Instruct"
+# # Hugging Face InferenceClient を初期化
+# client = InferenceClient(
+#     provider="together",  # または "huggingface" など適切なプロバイダーを指定
+#     token=os.getenv("HUGGINGFACE_API_KEY"),
+# )
 
 
 async def generate_advice_with_huggingface(
@@ -20,10 +34,27 @@ async def generate_advice_with_huggingface(
     execution_stdout: str | None,
     execution_stderr: str | None,
     correct_code: str | None = None,
+    is_correct: bool = False,
 ) -> str:
     """指定された情報を基にHugging Faceのモデルからアドバイスを生成する"""
 
+    # 正解コードがnotebook形式の場合、Pythonコードに変換
+    processed_correct_code = None
+    if correct_code:
+        try:
+            # JSONかXML形式かを判定してnotebook処理を試す
+            if correct_code.strip().startswith(("{", "<")):
+                processed_correct_code = notebook_to_python(correct_code)
+            else:
+                processed_correct_code = correct_code
+        except Exception:
+            # notebook処理に失敗した場合は元のコードを使用
+            processed_correct_code = correct_code
+
     prompt_string = f"""
+【判定結果】
+{"正解です！素晴らしい！" if is_correct else "不正解です。"}
+
 あなたは、Pythonプログラミングを学ぶ初学者をサポートする親切なAIアシスタントです。
 以下の情報に基づいて、学習者が自分で間違いに気づき、解決できるようになるためのヒントやアドバイスを生成してください。
 
@@ -32,6 +63,7 @@ async def generate_advice_with_huggingface(
 - 指摘は具体的かつ建設的に行い、学習者のモチベーションを維持するよう努めてください。
 - 難しい専門用語は避け、分かりやすい言葉で説明してください。
 - アドバイスは日本語でお願いします。
+{"- 正解の場合は、コードの改善点や別の解き方などを提案してください。" if is_correct else ""}
 
 【課題情報】
 タイトル: {problem_title}
@@ -56,22 +88,48 @@ async def generate_advice_with_huggingface(
 2.  **エラーがないが期待通りに動作しない場合 (または改善点がある場合):**
     - コードのロジックで改善できる点や、より効率的な書き方があれば示唆してください。
     - 変数名やコメントの付け方など、読みやすいコードにするための一般的なアドバイスも適宜含めてください。
-    - (もし `correct_code` が提供されていれば、それを直接見せるのではなく、学習者のコードとの違いからヒントを得られるような問いかけをしてください)
+    - (もし正解コードが提供されていれば、それを直接見せるのではなく、学習者のコードとの違いからヒントを得られるような問いかけをしてください)
 3.  **よくある間違いの指摘:**
     - 初学者が陥りやすい間違いのパターンに合致する場合は、それとなく教えてあげてください。
       (例: for文の範囲、インデックスエラー、無限ループの可能性など)
 
-上記を踏まえて、学習者へのアドバイスを生成してください。
 """
 
+    # 正解コードがある場合はプロンプトに追加
+    if processed_correct_code:
+        prompt_string += f"""【参考：正解コード】
+```python
+{processed_correct_code}
+```
+
+"""
+
+    prompt_string += "上記を踏まえて、学習者へのアドバイスを生成してください。"
+
     try:
-        completion = client.chat.completions.create(
-            model=HUGGINGFACE_MODEL_ID,
-            messages=[{"role": "user", "content": prompt_string}],
-            max_tokens=1500,
+        ## Hugging Face APIを使用してアドバイスを生成する場合
+        # completion = client.chat.completions.create(
+        #     model=HUGGINGFACE_MODEL_ID,
+        #     messages=[{"role": "user", "content": prompt_string}],
+        #     max_tokens=1500,
+        # )
+        # advice_text = completion.choices[0].message.content
+
+        # # OpenAI APIを使用してアドバイスを生成する場合
+        # response = client.responses.create(
+        #     model=OPENAI_MODEL,
+        #     input=[{"role": "user", "content": prompt_string}],
+        # )
+        # advice_text = response.output_text
+
+        # Google GenAI APIを使用してアドバイスを生成する場合
+        response = client.models.generate_content(
+            model="gemini-2.0-flash-lite",
+            contents=prompt_string,
         )
-        advice_text = completion.choices[0].message.content
+        advice_text = response.text
+
         return advice_text
     except Exception as e:
-        print(f"Hugging Face API呼び出し中にエラーが発生しました: {e}")
+        logger.error("Hugging Face API呼び出し中にエラーが発生しました: %s", e)
         return "申し訳ありません。アドバイスの生成中にエラーが発生しました。"

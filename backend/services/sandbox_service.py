@@ -3,10 +3,14 @@ import asyncio
 import docker
 import time
 import json
-from typing import Optional
+import re
+import logging
+from typing import Optional, List
 from pydantic import BaseModel
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 import nbformat
+
+logger = logging.getLogger(__name__)
 
 
 def notebook_to_python(notebook_str: str) -> str:
@@ -143,11 +147,80 @@ def execute_python_code_sync(
     """
     start_time = time.time()
 
+    def validate_package_name(package: str) -> bool:
+        """パッケージ名の安全性を検証"""
+        # 基本的なパッケージ名パターンの検証
+        if not re.match(r"^[a-zA-Z0-9\-_\.]+([<>=!]+[a-zA-Z0-9\-_\.]+)*$", package):
+            return False
+
+        # 危険なパッケージ名のブラックリスト
+        dangerous_patterns = [
+            r"\.\./",  # パストラバーサル
+            r"[;&|]",  # コマンドインジェクション
+            "sudo",  # 権限昇格
+            "rm",  # ファイル削除
+            "chmod",  # 権限変更
+        ]
+
+        for pattern in dangerous_patterns:
+            if re.search(pattern, package, re.IGNORECASE):
+                return False
+
+        return True
+
+    def extract_pip_packages(code: str) -> List[str]:
+        """コードから pip install が必要なライブラリ名を抽出"""
+        # !pip install パターン (Jupyter Notebook風)
+        pip_pattern = r"^!pip install\s+(.+)"
+        # pip install パターン (通常のスクリプト)
+        pip_pattern2 = r"^pip install\s+(.+)"
+
+        matches = re.findall(pip_pattern, code, re.MULTILINE)
+        matches.extend(re.findall(pip_pattern2, code, re.MULTILINE))
+
+        packages = []
+        for match in matches:
+            # パッケージ名をスペースで分割して個別のパッケージとして追加
+            # バージョン指定やオプションも含めて適切に処理
+            parts = match.strip().split()
+            for part in parts:
+                # オプション（--upgrade, --quiet等）をスキップ
+                if not part.startswith("-"):
+                    packages.append(part)
+
+        # 重複を除去し、安全なパッケージ名のみを許可
+        safe_packages = []
+        for pkg in set(packages):
+            # セキュリティ検証
+            if validate_package_name(pkg):
+                safe_packages.append(pkg)
+            else:
+                logger.warning("Potentially unsafe package name rejected: %s", pkg)
+
+        return safe_packages
+
+    def remove_pip_install_lines(code: str) -> str:
+        """コードから !pip install と pip install の行を削除"""
+        # !pip install パターン
+        pip_pattern1 = r"^!pip install\s+.+$"
+        # pip install パターン
+        pip_pattern2 = r"^pip install\s+.+$"
+
+        code = re.sub(pip_pattern1, "", code, flags=re.MULTILINE)
+        code = re.sub(pip_pattern2, "", code, flags=re.MULTILINE)
+
+        return code
+
     def run_container():
         """コンテナ実行を行う内部関数"""
         client = docker.from_env()
 
         try:
+            # pip install が必要なライブラリを抽出
+            pip_packages = extract_pip_packages(user_code)
+            # pip install 行を削除したコードを作成
+            cleaned_code = remove_pip_install_lines(user_code)
+
             # 標準入力がある場合はそれを含めたコードを作成
             if stdin_input:
                 # 標準入力をハードコーディングしたコードを生成
@@ -156,25 +229,88 @@ import sys
 from io import StringIO
 sys.stdin = StringIO('''{stdin_input}''')
 
-{user_code}
+{cleaned_code}
 """
             else:
-                full_code = user_code
+                full_code = cleaned_code
 
-            # コンテナを実行（コードを直接実行）
-            result = client.containers.run(
+            # コンテナを起動
+            container = client.containers.run(
                 image="python-sandbox",
-                command=["python", "-c", full_code],
+                command=["sleep", "30"],  # 一時的にsleepで起動
                 network_disabled=True,
                 mem_limit="128m",
-                remove=True,
-                stderr=True,
-                stdout=True,
+                detach=True,
             )
 
-            stdout = result.decode("utf-8") if result else ""
-            stderr = ""
-            exit_code = 0
+            try:
+                # 変数を初期化
+                stderr = ""
+
+                # 必要なライブラリをインストール
+                if pip_packages:
+                    logger.info("Installing packages: %s", pip_packages)
+                    installed_packages = []
+                    failed_packages = []
+
+                    for package in pip_packages:
+                        try:
+                            # より詳細なインストールオプション
+                            install_result = container.exec_run(
+                                [
+                                    "pip",
+                                    "install",
+                                    "--no-cache-dir",
+                                    "--disable-pip-version-check",
+                                    "--quiet",
+                                    package,
+                                ],
+                                stdout=True,
+                                stderr=True,
+                            )
+
+                            if install_result.exit_code == 0:
+                                installed_packages.append(package)
+                                logger.info("Successfully installed: %s", package)
+                            else:
+                                failed_packages.append(package)
+                                error_msg = (
+                                    install_result.output.decode("utf-8")
+                                    if install_result.output
+                                    else "Unknown error"
+                                )
+                                logger.warning("Failed to install package %s: %s", package, error_msg)
+
+                        except Exception as e:
+                            failed_packages.append(package)
+                            logger.warning("Exception during package installation %s: %s", package, str(e))
+
+                    # インストール結果をログに記録
+                    if installed_packages:
+                        logger.info("Successfully installed packages: %s", installed_packages)
+                    if failed_packages:
+                        logger.warning("Failed to install packages: %s", failed_packages)
+                        # 失敗したパッケージがあることをstderrに記録（ユーザーに通知）
+                        if not stderr:
+                            stderr = f"Warning: Could not install some packages: {', '.join(failed_packages)}\n"
+
+                # 実際のコードを実行
+                exec_result = container.exec_run(["python", "-c", full_code])
+
+                stdout = (
+                    exec_result.output.decode("utf-8") if exec_result.output else ""
+                )
+                # exit_codeが0でない場合はstdoutをstderrとして扱う
+                if exec_result.exit_code != 0:
+                    stderr = stdout
+                    stdout = ""
+
+                exit_code = exec_result.exit_code
+
+            finally:
+                # コンテナを停止・削除
+                container.stop()
+                container.remove()
 
         except docker.errors.ContainerError as e:
             # Docker SDK 7.1.0 での ContainerError 処理
@@ -191,14 +327,14 @@ sys.stdin = StringIO('''{stdin_input}''')
         return stdout, stderr, exit_code
 
     try:
-        # タイムアウト付きでコンテナを実行
+        # タイムアウト付きでコンテナを実行（30秒に延長してパッケージインストールに対応）
         with ThreadPoolExecutor() as executor:
             future = executor.submit(run_container)
             try:
-                stdout, stderr, exit_code = future.result(timeout=5)
+                stdout, stderr, exit_code = future.result(timeout=30)
             except FuturesTimeoutError:
                 stdout = ""
-                stderr = "Code execution timed out (5 seconds)"
+                stderr = "Code execution timed out (30 seconds)"
                 exit_code = 124
 
         # 実行時間を計算
