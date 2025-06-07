@@ -31,6 +31,8 @@ async def generate_advice_with_huggingface(
     execution_stdout: str | None,
     execution_stderr: str | None,
     correct_code: str | None = None,
+    correct_stdout: str | None = None,
+    correct_stderr: str | None = None,
     is_correct: bool = False,
 ) -> str:
     """指定された情報を基にHugging Faceのモデルからアドバイスを生成する"""
@@ -83,9 +85,10 @@ async def generate_advice_with_huggingface(
     - エラーメッセージ ({execution_stderr}) が何を意味するのか、考えられる原因は何かを優しく説明してください。
     - エラーが発生している箇所を特定するためのデバッグ方法（例: print文の挿入箇所など）を提案してください。
 2.  **エラーがないが期待通りに動作しない場合 (または改善点がある場合):**
+    - 学習者の実行結果と期待される結果を比較して、何が違うのかを指摘してください。
     - コードのロジックで改善できる点や、より効率的な書き方があれば示唆してください。
     - 変数名やコメントの付け方など、読みやすいコードにするための一般的なアドバイスも適宜含めてください。
-    - (もし正解コードが提供されていれば、それを直接見せるのではなく、学習者のコードとの違いからヒントを得られるような問いかけをしてください)
+    - (もし正解コードとその実行結果が提供されていれば、それを直接見せるのではなく、学習者のコードや実行結果との違いからヒントを得られるような問いかけをしてください)
 3.  **よくある間違いの指摘:**
     - 初学者が陥りやすい間違いのパターンに合致する場合は、それとなく教えてあげてください。
       (例: for文の範囲、インデックスエラー、無限ループの可能性など)
@@ -101,8 +104,18 @@ async def generate_advice_with_huggingface(
 
 """
 
-    prompt_string += "上記を踏まえて、学習者へのアドバイスを生成してください。"
+        # 正解コードの実行結果も追加
+        if correct_stdout is not None or correct_stderr is not None:
+            prompt_string += f"""【正解コードの実行結果】
+標準出力:
+{correct_stdout if correct_stdout else "なし"}
+標準エラー:
+{correct_stderr if correct_stderr else "なし"}
 
+"""
+
+    prompt_string += "上記を踏まえて、学習者へのアドバイスを生成してください。"
+    print(prompt_string)
     try:
         ## Hugging Face APIを使用してアドバイスを生成する場合
         # completion = client.chat.completions.create(
@@ -120,12 +133,11 @@ async def generate_advice_with_huggingface(
         # advice_text = response.output_text
 
         # Google GenAI APIを使用してアドバイスを生成する場合
-        # response = client.models.generate_content(
-        #     model="gemini-2.0-flash-lite",
-        #     contents=prompt_string,
-        # )
-        # advice_text = response.text
-        advice_text = "test"
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt_string,
+        )
+        advice_text = response.text
 
         return advice_text
     except Exception as e:
